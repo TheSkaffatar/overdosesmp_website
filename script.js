@@ -1,35 +1,10 @@
-const SERVER_IP = "play.overdosesmp.online";
-
-// Add your permanent Discord invite here later.
-const DISCORD_URL = "";
-
-async function copyServerIp() {
-  try {
-    await navigator.clipboard.writeText(SERVER_IP);
-  } catch {
-    const input = document.createElement("textarea");
-    input.value = SERVER_IP;
-    document.body.appendChild(input);
-    input.select();
-    document.execCommand("copy");
-    input.remove();
-  }
-
-  const toast = document.getElementById("toast");
-  toast.classList.add("show");
-  setTimeout(() => toast.classList.remove("show"), 1800);
-}
-
-document.getElementById("copyIp").addEventListener("click", copyServerIp);
-document.getElementById("copyIpBottom").addEventListener("click", copyServerIp);
-
-document.querySelectorAll(".discord-link").forEach(link => {
-  link.addEventListener("click", event => {
-    if (!DISCORD_URL) {
-      event.preventDefault();
-      alert("Discord invite will be added soon.");
-    }
-  });
-
-  if (DISCORD_URL) link.href = DISCORD_URL;
-});
+const SERVER_IP="play.overdosesmp.online";
+const LINKS={discord:"",vote:"",full:"",lite:""};
+const toast=document.getElementById("toast");let timer;
+function showToast(msg){toast.textContent=msg;toast.classList.add("show");clearTimeout(timer);timer=setTimeout(()=>toast.classList.remove("show"),1800)}
+async function copyIP(){try{await navigator.clipboard.writeText(SERVER_IP);showToast("Server IP copied")}catch{showToast(SERVER_IP)}}
+document.getElementById("copy-ip").addEventListener("click",copyIP);
+document.querySelectorAll(".copy-inline").forEach(x=>x.addEventListener("click",copyIP));
+document.querySelectorAll("[data-link]").forEach(a=>{const url=LINKS[a.dataset.link];if(url){a.href=url;if(["full","lite"].includes(a.dataset.link))a.textContent="Download"}else a.addEventListener("click",e=>{e.preventDefault();showToast(["full","lite"].includes(a.dataset.link)?"Download coming soon":a.textContent.trim()+" link coming soon")})});
+const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add("visible");observer.unobserve(e.target)}}),{threshold:.12});
+document.querySelectorAll(".reveal").forEach(x=>observer.observe(x));
