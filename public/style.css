@@ -262,3 +262,43 @@ body.modal-open{overflow:hidden}
   .hero-controls{margin-top:44px}
 }
 
+
+/* v16.3: cleaner outlined wordmark + stronger restrained wrap */
+.hero-overdose{
+  background:none;
+  -webkit-background-clip:initial;
+  background-clip:initial;
+  color:inherit;
+  -webkit-text-stroke:0;
+  text-shadow:none;
+  filter:drop-shadow(0 18px 15px rgba(0,0,0,.68));
+  white-space:nowrap;
+}
+.hero-overdose span{
+  background:linear-gradient(180deg,#fff 0%,#f5eefe 15%,#b99bc9 34%,#68437e 49%,#d8c0e4 57%,#f5edfa 70%,#7c4b99 100%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  -webkit-text-stroke:2.4px rgba(250,235,255,.94);
+  paint-order:stroke fill;
+  filter:drop-shadow(0 0 1px #17051f) drop-shadow(0 0 3px #2d0b3b);
+  text-shadow:
+    0 3px 0 rgba(42,10,55,.95),
+    0 7px 0 rgba(18,4,27,.96),
+    0 12px 15px rgba(0,0,0,.92),
+    0 0 16px rgba(226,165,255,.24),
+    0 0 44px rgba(151,54,210,.20);
+}
+/* Noticeable but restrained downward wrap toward both ends. */
+.hero-overdose span:nth-child(1),.hero-overdose span:nth-child(8){transform:translateY(25px)}
+.hero-overdose span:nth-child(2),.hero-overdose span:nth-child(7){transform:translateY(14px)}
+.hero-overdose span:nth-child(3),.hero-overdose span:nth-child(6){transform:translateY(6px)}
+.hero-overdose span:nth-child(4),.hero-overdose span:nth-child(5){transform:translateY(1px)}
+@media(max-width:800px){
+  .hero-overdose{-webkit-text-stroke:0}
+  .hero-overdose span{-webkit-text-stroke:1.25px rgba(250,235,255,.92)}
+  .hero-overdose span:nth-child(1),.hero-overdose span:nth-child(8){transform:translateY(14px)}
+  .hero-overdose span:nth-child(2),.hero-overdose span:nth-child(7){transform:translateY(8px)}
+  .hero-overdose span:nth-child(3),.hero-overdose span:nth-child(6){transform:translateY(4px)}
+  .hero-overdose span:nth-child(4),.hero-overdose span:nth-child(5){transform:translateY(1px)}
+}
