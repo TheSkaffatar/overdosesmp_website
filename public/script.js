@@ -87,3 +87,20 @@ document.getElementById("open-delete")?.addEventListener("click",openDelete);del
 document.getElementById("delete-form")?.addEventListener("submit",async e=>{e.preventDefault();const form=e.currentTarget,err=document.getElementById("delete-error"),btn=form.querySelector("button[type=submit]"),f=new FormData(form);err.textContent="";btn.disabled=true;try{await api("/api/account/delete",{method:"POST",body:JSON.stringify({password:f.get("password"),confirmation:f.get("confirmation")})});closeDelete();renderAccount(null);closeProfile();showToast("Account deleted")}catch(x){err.textContent=x.message}finally{btn.disabled=false}});
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(deleteModal?.classList.contains("open"))closeDelete();else if(accountModal?.classList.contains("open"))closeAccount()});
 refreshAccount();
+
+// v16.5: mobile navigation
+const mobileMenuToggle=document.getElementById("mobile-menu-toggle");
+const mobileMenu=document.getElementById("mobile-menu");
+const mobileAccountTrigger=document.getElementById("mobile-account-trigger");
+const mobileVoteTrigger=document.querySelector("[data-mobile-vote]");
+function setMobileMenu(open){if(!mobileMenu||!mobileMenuToggle)return;mobileMenu.classList.toggle("open",open);mobileMenuToggle.classList.toggle("open",open);mobileMenuToggle.setAttribute("aria-expanded",String(open));mobileMenuToggle.setAttribute("aria-label",open?"Close navigation":"Open navigation");mobileMenu.setAttribute("aria-hidden",String(!open))}
+mobileMenuToggle?.addEventListener("click",e=>{e.stopPropagation();setMobileMenu(!mobileMenu.classList.contains("open"))});
+mobileMenu?.querySelectorAll('a[href^="#"]').forEach(a=>a.addEventListener("click",()=>setMobileMenu(false)));
+mobileVoteTrigger?.addEventListener("click",e=>{setMobileMenu(false);openVoteModal(e)});
+mobileAccountTrigger?.addEventListener("click",()=>{setMobileMenu(false);openAccount()});
+document.addEventListener("click",e=>{if(mobileMenu?.classList.contains("open")&&!mobileMenu.contains(e.target)&&!mobileMenuToggle?.contains(e.target))setMobileMenu(false)});
+window.addEventListener("resize",()=>{if(innerWidth>800)setMobileMenu(false)});
+const syncMobileAccountLabel=()=>{if(mobileAccountTrigger)mobileAccountTrigger.textContent=currentAccount?.username||"Log In"};
+const originalRenderAccount=renderAccount;
+renderAccount=function(account){originalRenderAccount(account);syncMobileAccountLabel()};
+syncMobileAccountLabel();
