@@ -127,3 +127,14 @@ body.modal-open{overflow:hidden}
 .hero-download-action{justify-content:center}
 .hero-download-button{min-width:250px;min-height:52px;padding:0 34px;font-size:14px}
 .mc-avatar [hidden]{display:none!important}
+
+/* Minecraft gameplay status */
+#profile-minecraft-name.hostile-name { color: #ff4b55; }
+#profile-minecraft-name.bounty-name {
+  color: #ff4b55;
+  text-shadow: 0 0 12px rgba(255, 193, 7, .35);
+  background: linear-gradient(90deg, #ff4b55 0 55%, #f4c95d 82%, #ff4b55 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
