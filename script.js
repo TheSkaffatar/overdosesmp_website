@@ -5,6 +5,10 @@ function showToast(msg){toast.textContent=msg;toast.classList.add("show");clearT
 async function copyIP(){try{await navigator.clipboard.writeText(SERVER_IP);showToast("Server IP copied")}catch{showToast(SERVER_IP)}}
 document.getElementById("copy-ip").addEventListener("click",copyIP);
 document.querySelectorAll(".copy-inline").forEach(x=>x.addEventListener("click",copyIP));
-document.querySelectorAll("[data-link]").forEach(a=>{const url=LINKS[a.dataset.link];if(url){a.href=url;if(["full","lite"].includes(a.dataset.link))a.setAttribute("target","_blank")}else a.addEventListener("click",e=>{e.preventDefault();showToast(["full","lite"].includes(a.dataset.link)?"Download coming soon":a.textContent.trim()+" link coming soon")})});
+const VOXY_FULL_URL="";
+const fullDownload=document.getElementById("full-download");
+const voxyCheckbox=document.getElementById("include-voxy");
+if(fullDownload){fullDownload.href=LINKS.full;fullDownload.setAttribute("target","_blank");fullDownload.addEventListener("click",e=>{if(voxyCheckbox?.checked){e.preventDefault();if(VOXY_FULL_URL){window.open(VOXY_FULL_URL,"_blank","noopener")}else showToast("Full pack with Voxy data coming soon")}})}
+document.querySelectorAll("[data-link]:not([data-link='full'])").forEach(a=>{const url=LINKS[a.dataset.link];if(url){a.href=url;if(a.dataset.link==="lite")a.setAttribute("target","_blank")}else a.addEventListener("click",e=>{e.preventDefault();showToast(a.dataset.link==="lite"?"Download coming soon":a.textContent.trim()+" link coming soon")})});
 const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add("visible");observer.unobserve(e.target)}}),{threshold:.12});
 document.querySelectorAll(".reveal").forEach(x=>observer.observe(x));

@@ -16,3 +16,19 @@ drop-shadow(0 0 65px rgba(109,24,177,.24))}.eyebrow{color:#aa6ce3;font-weight:80
 .rules .pack-note{max-width:780px;margin:28px auto 0;text-align:center}
 @media(max-width:900px){.rules-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:620px){.rules-grid{grid-template-columns:1fr}}
+
+/* v5: server features + Voxy download option */
+.server-features{margin-top:28px;border:1px solid #34283d;border-radius:14px;background:linear-gradient(145deg,#100c13,#0b090d);overflow:visible}
+.server-features>summary{padding:18px 20px;align-items:center}
+.server-features .mods{padding:0 20px 12px}
+.download-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
+.voxy-option{position:relative;display:flex;align-items:center;gap:9px;min-height:46px;padding:0 14px;border:1px solid #3a2d42;border-radius:9px;background:#100d13;color:#bcb3c2;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;user-select:none}
+.voxy-option:hover{border-color:#70468a;background:#151019;color:#e8dff0}
+.voxy-option input{position:absolute;opacity:0;pointer-events:none}
+.custom-check{width:16px;height:16px;border:1px solid #70468a;border-radius:4px;background:#09070b;display:grid;place-items:center;transition:.18s}
+.voxy-option input:checked+.custom-check{background:#7c35bb;border-color:#a45be0;box-shadow:0 0 14px #873cc855}
+.voxy-option input:checked+.custom-check:after{content:'✓';font-size:11px;line-height:1;color:#fff}
+.tooltip{position:absolute;z-index:30;left:50%;bottom:calc(100% + 11px);width:260px;transform:translate(-50%,7px);padding:10px 12px;border:1px solid #5a3970;border-radius:8px;background:#120d17;color:#d8cce0;font-size:11px;font-weight:500;line-height:1.45;white-space:normal;box-shadow:0 12px 35px #0009,0 0 22px #7c35bb22;opacity:0;visibility:hidden;pointer-events:none;transition:.18s}
+.tooltip:after{content:'';position:absolute;top:100%;left:50%;width:8px;height:8px;background:#120d17;border-right:1px solid #5a3970;border-bottom:1px solid #5a3970;transform:translate(-50%,-4px) rotate(45deg)}
+.tooltip-wrap:hover .tooltip,.tooltip-wrap:focus-within .tooltip{opacity:1;visibility:visible;transform:translate(-50%,0)}
+@media(max-width:800px){.download-row{grid-template-columns:1fr}.voxy-option{justify-content:center}.tooltip{left:50%;width:min(260px,80vw)}}
