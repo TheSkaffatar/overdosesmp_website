@@ -15,3 +15,9 @@ Expected response:
 
 Next step after this works:
 Create/bind the D1 database as DB, then add account schema and authentication endpoints.
+
+
+v14 Minecraft linking:
+1. Run D1-MIGRATION-v14.sql once in the overdosesmp D1 console.
+2. Add Worker secret MINECRAFT_API_TOKEN in Cloudflare. Never commit the token.
+3. Put the same token in config/overdosesmpcore.json as websiteApiToken and restart Minecraft server.

@@ -163,8 +163,12 @@
         <article class="stat-card"><span>PLAYTIME</span><strong>—</strong><small>Available after linking</small></article>
       </div>
       <article class="portal-card minecraft-link-card">
-        <div><span class="card-kicker">MINECRAFT ACCOUNT</span><h3 id="link-title">Connect your player</h3><p id="link-description">Run <code>/verify</code> in-game. You'll receive a temporary code that can be entered here once verification is enabled.</p></div>
-        <button class="button primary" id="link-minecraft-button" type="button" disabled>Link Minecraft Account</button>
+        <div><span class="card-kicker">MINECRAFT ACCOUNT</span><h3 id="link-title">Connect your player</h3><p id="link-description">Run <code>/verify</code> in-game, click the code to copy it, then paste it here. Codes expire after 10 minutes.</p></div>
+        <form id="minecraft-link-form" class="minecraft-link-form">
+          <input name="code" id="minecraft-code" placeholder="OD-7K4P-92QX-6R8T" autocomplete="off" spellcheck="false" maxlength="40" required>
+          <button class="button primary" id="link-minecraft-button" type="submit">Link Minecraft Account</button>
+          <p class="form-error" id="minecraft-link-error"></p>
+        </form>
       </article>
 
       <div class="profile-section-heading settings-heading"><div><span class="card-kicker">ACCOUNT</span><h2>Settings</h2></div></div>

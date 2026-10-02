@@ -37,6 +37,14 @@ export default {
       if (!sameOrigin(request)) return json({ error: "Invalid request." }, 403);
       return deleteAccount(request, env);
     }
+    const verificationMatch = url.pathname.match(/^\/api\/minecraft\/verifications\/([0-9a-fA-F-]{32,36})$/);
+    if (verificationMatch && request.method === "PUT") {
+      return receiveMinecraftVerification(request, env, verificationMatch[1]);
+    }
+    if (url.pathname === "/api/minecraft/link" && request.method === "POST") {
+      if (!sameOrigin(request)) return json({ error: "Invalid request." }, 403);
+      return linkMinecraftAccount(request, env);
+    }
     if (url.pathname.startsWith("/api/")) return json({ error: "Not found." }, 404);
 
     return env.ASSETS.fetch(request);
@@ -160,6 +168,107 @@ async function deleteAccount(request, env) {
     env.DB.prepare("DELETE FROM accounts WHERE id = ?").bind(account.id)
   ]);
   return json({ ok: true }, 200, { "Set-Cookie": clearSessionCookie() });
+}
+
+async function receiveMinecraftVerification(request, env, pathUuid) {
+  if (!env.MINECRAFT_API_TOKEN) return json({ error: "Server integration is not configured." }, 503);
+  const auth = request.headers.get("Authorization") || "";
+  if (!auth.startsWith("Bearer ") || !(await safeSecretEqual(auth.slice(7), env.MINECRAFT_API_TOKEN))) return json({ error: "Unauthorized." }, 401);
+
+  const body = await readJson(request);
+  if (!body) return json({ error: "Invalid JSON." }, 400);
+  const requestId = String(body.requestId || "").trim();
+  const code = String(body.code || "").trim().toUpperCase();
+  const minecraftUuid = normalizeUuid(String(body.minecraftUuid || ""));
+  const routeUuid = normalizeUuid(pathUuid);
+  const minecraftUsername = String(body.minecraftUsername || "").trim();
+  const generation = Number(body.generation);
+  const createdAt = Number(body.createdAt);
+  const expiresAt = Number(body.expiresAt);
+  const now = Date.now();
+
+  if (!requestId || !/^[0-9a-fA-F-]{36}$/.test(requestId)) return json({ error: "Invalid requestId." }, 400);
+  if (!/^OD-[A-Z0-9-]{8,32}$/.test(code)) return json({ error: "Invalid verification code." }, 400);
+  if (!minecraftUuid || minecraftUuid !== routeUuid) return json({ error: "Minecraft UUID mismatch." }, 400);
+  if (!/^[A-Za-z0-9_]{1,16}$/.test(minecraftUsername)) return json({ error: "Invalid Minecraft username." }, 400);
+  if (!Number.isSafeInteger(generation) || generation < 0 || !Number.isSafeInteger(createdAt) || !Number.isSafeInteger(expiresAt)) return json({ error: "Invalid timestamps or generation." }, 400);
+  if (expiresAt <= now || expiresAt <= createdAt || expiresAt - createdAt > 11 * 60 * 1000) return json({ error: "Invalid or expired verification window." }, 400);
+  if (createdAt > now + 2 * 60 * 1000) return json({ error: "Invalid creation timestamp." }, 400);
+
+  const current = await env.DB.prepare("SELECT request_id, generation FROM verification_codes WHERE minecraft_uuid = ? LIMIT 1").bind(minecraftUuid).first();
+  if (current) {
+    if (Number(current.generation) > generation) return json({ error: "Stale generation." }, 409);
+    if (Number(current.generation) === generation) {
+      if (current.request_id === requestId) return json({ status: "created", requestId });
+      return json({ error: "Generation conflict." }, 409);
+    }
+  }
+
+  const codeHash = await sha256Hex(code);
+  try {
+    const result = await env.DB.prepare(`INSERT INTO verification_codes
+      (code_hash, minecraft_uuid, minecraft_username, expires_at, created_at, request_id, generation)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(minecraft_uuid) DO UPDATE SET
+        code_hash = excluded.code_hash,
+        minecraft_username = excluded.minecraft_username,
+        expires_at = excluded.expires_at,
+        created_at = excluded.created_at,
+        request_id = excluded.request_id,
+        generation = excluded.generation
+      WHERE excluded.generation > verification_codes.generation`)
+      .bind(codeHash, minecraftUuid, minecraftUsername, expiresAt, createdAt, requestId, generation).run();
+    if (!result.success) return json({ error: "Unable to store verification." }, 500);
+  } catch (e) {
+    console.error("Minecraft verification storage failed", e?.message || e);
+    return json({ error: "Unable to store verification." }, 500);
+  }
+  return json({ status: "created", requestId }, 201);
+}
+
+async function linkMinecraftAccount(request, env) {
+  const account = await authenticatedAccount(request, env);
+  if (!account) return json({ error: "You must be logged in." }, 401);
+  const body = await readJson(request);
+  const code = String(body?.code || "").trim().toUpperCase();
+  if (!/^OD-[A-Z0-9-]{8,32}$/.test(code)) return json({ error: "Enter a valid verification code." }, 400);
+
+  const codeHash = await sha256Hex(code);
+  const now = Date.now();
+  const verification = await env.DB.prepare(`SELECT minecraft_uuid, minecraft_username, expires_at
+    FROM verification_codes WHERE code_hash = ? LIMIT 1`).bind(codeHash).first();
+  if (!verification || Number(verification.expires_at) <= now) {
+    if (verification) await env.DB.prepare("DELETE FROM verification_codes WHERE code_hash = ?").bind(codeHash).run();
+    return json({ error: "That verification code is invalid or has expired." }, 400);
+  }
+
+  const existingForAccount = await env.DB.prepare("SELECT minecraft_uuid, minecraft_username FROM minecraft_accounts WHERE account_id = ? LIMIT 1").bind(account.id).first();
+  if (existingForAccount) return json({ error: "This website account already has a Minecraft account linked." }, 409);
+  const existingMinecraft = await env.DB.prepare("SELECT account_id FROM minecraft_accounts WHERE minecraft_uuid = ? LIMIT 1").bind(verification.minecraft_uuid).first();
+  if (existingMinecraft) return json({ error: "That Minecraft account is already linked to another website account." }, 409);
+
+  try {
+    await env.DB.batch([
+      env.DB.prepare("INSERT INTO minecraft_accounts (minecraft_uuid, account_id, minecraft_username, linked_at) VALUES (?, ?, ?, ?)").bind(verification.minecraft_uuid, account.id, verification.minecraft_username, now),
+      env.DB.prepare("DELETE FROM verification_codes WHERE code_hash = ? AND minecraft_uuid = ?").bind(codeHash, verification.minecraft_uuid)
+    ]);
+  } catch (e) {
+    console.error("Minecraft account link failed", e?.message || e);
+    return json({ error: "Unable to link that Minecraft account." }, 409);
+  }
+  return json({ ok: true, minecraft: { uuid: verification.minecraft_uuid, username: verification.minecraft_username, linkedAt: now } });
+}
+
+function normalizeUuid(value) {
+  const hex = value.toLowerCase().replace(/-/g, "");
+  return /^[0-9a-f]{32}$/.test(hex) ? hex : null;
+}
+
+async function safeSecretEqual(a, b) {
+  const [ah, bh] = await Promise.all([sha256Hex(String(a)), sha256Hex(String(b))]);
+  let diff = 0;
+  for (let i = 0; i < ah.length; i++) diff |= ah.charCodeAt(i) ^ bh.charCodeAt(i);
+  return diff === 0;
 }
 
 async function createSession(env, accountId, account, status = 200) {
