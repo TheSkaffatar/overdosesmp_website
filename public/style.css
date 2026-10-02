@@ -191,26 +191,33 @@ body.modal-open{overflow:hidden}
   -webkit-background-clip:text;
   background-clip:text;
   color:transparent;
-  -webkit-text-stroke:1.4px rgba(248,232,255,.52);
+  -webkit-text-stroke:2px rgba(255,240,255,.82);
   text-shadow:
     0 2px 0 rgba(255,255,255,.10),
-    0 5px 0 rgba(35,11,49,.75),
+    0 0 2px rgba(255,255,255,.32),
+    0 5px 0 rgba(25,5,37,.92),
     0 10px 13px rgba(0,0,0,.92),
     0 0 14px rgba(223,158,255,.22),
     0 0 42px rgba(151,54,210,.22),
     0 0 95px rgba(104,25,160,.18);
-  filter:drop-shadow(0 18px 15px rgba(0,0,0,.65));
+  filter:drop-shadow(0 0 1px rgba(16,2,24,1)) drop-shadow(0 0 3px rgba(31,5,45,.95)) drop-shadow(0 18px 15px rgba(0,0,0,.65));
 }
-.hero-overdose:after{
-  content:'OVERDOSE';
-  position:absolute;
-  inset:0;
-  z-index:-1;
-  color:transparent;
-  -webkit-text-stroke:4px rgba(27,8,38,.76);
-  transform:translateY(5px);
-  filter:blur(.4px);
+.hero-overdose span{
+  display:inline-block;
+  position:relative;
+  text-shadow:
+    0 0 0 #21082f,
+    0 2px 0 rgba(255,255,255,.10),
+    0 5px 0 rgba(25,5,37,.92),
+    0 10px 13px rgba(0,0,0,.92),
+    0 0 14px rgba(223,158,255,.22),
+    0 0 42px rgba(151,54,210,.22);
 }
+/* Slight wrapped arc: the outer letters sit lower than the center. */
+.hero-overdose span:nth-child(1),.hero-overdose span:nth-child(8){transform:translateY(12px)}
+.hero-overdose span:nth-child(2),.hero-overdose span:nth-child(7){transform:translateY(7px)}
+.hero-overdose span:nth-child(3),.hero-overdose span:nth-child(6){transform:translateY(3px)}
+.hero-overdose span:nth-child(4),.hero-overdose span:nth-child(5){transform:translateY(0)}
 .hero-smp{
   position:relative;
   width:48%;
@@ -246,7 +253,10 @@ body.modal-open{overflow:hidden}
   .server-inner{margin-top:clamp(195px,27vh,270px);width:98vw}
   .hero-wordmark{width:95vw;padding-inline:4px}
   .hero-overdose{font-size:clamp(50px,14.8vw,88px);letter-spacing:-.065em;-webkit-text-stroke:.8px rgba(248,232,255,.48)}
-  .hero-overdose:after{-webkit-text-stroke:2px rgba(27,8,38,.76);transform:translateY(3px)}
+
+  .hero-overdose span:nth-child(1),.hero-overdose span:nth-child(8){transform:translateY(7px)}
+  .hero-overdose span:nth-child(2),.hero-overdose span:nth-child(7){transform:translateY(4px)}
+  .hero-overdose span:nth-child(3),.hero-overdose span:nth-child(6){transform:translateY(2px)}
   .hero-smp{width:47%;margin-top:22px;margin-left:26%;font-size:clamp(19px,5.7vw,32px);letter-spacing:.43em;padding-left:.43em}
   .hero-smp:before,.hero-smp:after{width:28%}
   .hero-controls{margin-top:44px}
