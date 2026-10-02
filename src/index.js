@@ -300,26 +300,37 @@ async function receiveMinecraftPlayerStats(request, env, pathUuid) {
   if (online === null || lastSeen === undefined || firstJoined === undefined || [kills,deaths,playtimeTicks,distanceCm,blocksMined,monstersKilled,championKills,bounty].some(v => v === null)) return json({ error: "Invalid player statistics." }, 400);
 
   const now = Date.now();
+  // Core 0.2.6 may provide a source snapshot timestamp. Prefer it so a delayed
+  // older request cannot overwrite a newer snapshot. Fall back to receipt time
+  // for backwards compatibility with v15.4 senders.
+  const suppliedSnapshotTime = body.updatedAt ?? body.snapshotAt ?? body.timestamp ?? body.sentAt;
+  const parsedSnapshotTime = suppliedSnapshotTime == null ? now : Number(suppliedSnapshotTime);
+  if (!Number.isSafeInteger(parsedSnapshotTime) || parsedSnapshotTime < 0) return json({ error: "Invalid snapshot timestamp." }, 400);
+  const snapshotTime = parsedSnapshotTime;
+
   try {
-    await env.DB.prepare(`INSERT INTO minecraft_player_stats
+    const result = await env.DB.prepare(`INSERT INTO minecraft_player_stats
       (minecraft_uuid, online, last_seen, first_joined, kills, deaths, playtime_ticks, distance_cm, blocks_mined, monsters_killed, champion_kills, hostile, bounty, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(minecraft_uuid) DO UPDATE SET
         online=excluded.online, last_seen=excluded.last_seen, first_joined=COALESCE(minecraft_player_stats.first_joined, excluded.first_joined),
         kills=excluded.kills, deaths=excluded.deaths, playtime_ticks=excluded.playtime_ticks, distance_cm=excluded.distance_cm,
         blocks_mined=excluded.blocks_mined, monsters_killed=excluded.monsters_killed, champion_kills=excluded.champion_kills,
-        hostile=excluded.hostile, bounty=excluded.bounty, updated_at=excluded.updated_at`)
-      .bind(minecraftUuid, online, lastSeen, firstJoined, kills, deaths, playtimeTicks, distanceCm, blocksMined, monstersKilled, championKills, hostile, bounty, now).run();
+        hostile=excluded.hostile, bounty=excluded.bounty, updated_at=excluded.updated_at
+      WHERE excluded.updated_at >= minecraft_player_stats.updated_at`)
+      .bind(minecraftUuid, online, lastSeen, firstJoined, kills, deaths, playtimeTicks, distanceCm, blocksMined, monstersKilled, championKills, hostile, bounty, snapshotTime).run();
 
+    // Only let an accepted/current snapshot update the cached username too.
     const minecraftUsername = String(body.minecraftUsername || "").trim();
-    if (/^[A-Za-z0-9_]{1,16}$/.test(minecraftUsername)) {
+    if ((result?.meta?.changes ?? 0) > 0 && /^[A-Za-z0-9_]{1,16}$/.test(minecraftUsername)) {
       await env.DB.prepare("UPDATE minecraft_accounts SET minecraft_username = ? WHERE minecraft_uuid = ?").bind(minecraftUsername, minecraftUuid).run();
     }
   } catch (e) {
     console.error("Minecraft player stats storage failed", e?.message || e);
     return json({ error: "Unable to store player statistics." }, 500);
   }
-  return json({ status: "updated", minecraftUuid, updatedAt: now });
+  // Core 0.2.6 accepts HTTP 204 as acknowledgement.
+  return new Response(null, { status: 204 });
 }
 
 async function getMinecraftPlayerStats(request, env) {
@@ -330,8 +341,14 @@ async function getMinecraftPlayerStats(request, env) {
   const row = await env.DB.prepare(`SELECT online, last_seen, first_joined, kills, deaths, playtime_ticks, distance_cm, blocks_mined, monsters_killed, champion_kills, hostile, bounty, updated_at
     FROM minecraft_player_stats WHERE minecraft_uuid = ? LIMIT 1`).bind(linked.minecraft_uuid).first();
   if (!row) return json({ linked: true, minecraft: { uuid: linked.minecraft_uuid, username: linked.minecraft_username }, stats: null });
+  const now = Date.now();
+  const heartbeatFresh = Number.isFinite(Number(row.updated_at)) && (now - Number(row.updated_at) <= 60000);
+  const effectiveOnline = Boolean(row.online) && heartbeatFresh;
+  // If Core disappears without a clean disconnect, use the last received
+  // heartbeat as the effective last-seen time once its 60s lease expires.
+  const effectiveLastSeen = effectiveOnline ? row.last_seen : Math.max(Number(row.last_seen || 0), Number(row.updated_at || 0)) || null;
   return json({ linked: true, minecraft: { uuid: linked.minecraft_uuid, username: linked.minecraft_username }, stats: {
-    online: Boolean(row.online), lastSeen: row.last_seen, firstJoined: row.first_joined,
+    online: effectiveOnline, lastSeen: effectiveLastSeen, firstJoined: row.first_joined,
     kills: row.kills, deaths: row.deaths, playtimeTicks: row.playtime_ticks, distanceCm: row.distance_cm,
     blocksMined: row.blocks_mined, monstersKilled: row.monsters_killed, championKills: row.champion_kills,
     hostile: Boolean(row.hostile), bounty: row.bounty, updatedAt: row.updated_at
