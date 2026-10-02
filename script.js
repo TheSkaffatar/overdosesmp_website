@@ -1,5 +1,5 @@
 const SERVER_IP="play.overdosesmp.online";
-const LINKS={discord:"https://discord.gg/Wnt6RGzThf",vote:"",full:"https://github.com/TheSkaffatar/overdosesmp_website/releases/tag/modpack-v1.0",lite:"https://github.com/TheSkaffatar/overdosesmp_website/releases/tag/modpack-v1.0"};
+const LINKS={discord:"https://discord.gg/Wnt6RGzThf",vote:"",full:"https://github.com/TheSkaffatar/overdosesmp_website/releases/download/modpack-v1.0/OverdoseSMP-Modpack-26.2.FULL.-v1.0.0.mrpack",lite:"https://github.com/TheSkaffatar/overdosesmp_website/releases/download/modpack-v1.0/OverdoseSMP-Modpack-26.2.LITE.-v1.0.0.mrpack"};
 const toast=document.getElementById("toast");let timer;
 function showToast(msg){toast.textContent=msg;toast.classList.add("show");clearTimeout(timer);timer=setTimeout(()=>toast.classList.remove("show"),1800)}
 async function copyIP(){try{await navigator.clipboard.writeText(SERVER_IP);showToast("Server IP copied")}catch{showToast(SERVER_IP)}}
