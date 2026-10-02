@@ -302,3 +302,30 @@ body.modal-open{overflow:hidden}
   .hero-overdose span:nth-child(3),.hero-overdose span:nth-child(6){transform:translateY(4px)}
   .hero-overdose span:nth-child(4),.hero-overdose span:nth-child(5){transform:translateY(1px)}
 }
+
+/* v16.4: color-only wordmark refinement. Geometry/positioning from v16.3 is locked. */
+.hero-overdose span{
+  background:linear-gradient(180deg,
+    #fffaff 0%,
+    #f8effd 14%,
+    #e5d1ef 30%,
+    #b98dce 48%,
+    #ead8f3 62%,
+    #fff8ff 76%,
+    #a875c0 100%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  -webkit-text-stroke:2.35px rgba(255,242,255,.96);
+  paint-order:stroke fill;
+  filter:drop-shadow(0 0 1px rgba(24,5,34,1)) drop-shadow(0 0 3px rgba(54,12,72,.98));
+  text-shadow:
+    0 3px 0 rgba(53,12,70,.94),
+    0 7px 0 rgba(20,4,30,.96),
+    0 12px 15px rgba(0,0,0,.90),
+    0 0 13px rgba(235,190,255,.22),
+    0 0 38px rgba(151,54,210,.18);
+}
+@media(max-width:800px){
+  .hero-overdose span{-webkit-text-stroke:1.25px rgba(255,242,255,.95)}
+}
