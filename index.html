@@ -74,6 +74,23 @@
 <div class="steps"><div class="step reveal"><b>1</b><div><h3>Pick a modpack</h3><p>Choose Full for the complete setup or Lite for better performance.</p></div></div><div class="step reveal"><b>2</b><div><h3>Install & launch</h3><p>Import the pack into Modrinth and launch the included Minecraft profile.</p></div></div><div class="step reveal"><b>3</b><div><h3>Join OverdoseSMP</h3><p>Connect to <button class="copy-inline">play.overdosesmp.online</button> and start playing.</p></div></div></div>
 </div></section>
 
-<section class="community section"><div class="community-card reveal"><p class="eyebrow">COMMUNITY</p><h2>Stay connected.</h2><p>Join the Discord for server updates, announcements and the community. Voting links will be added when the server listings are ready.</p><div class="actions"><a class="button primary placeholder" href="#" data-link="discord">Join Discord</a><a class="button secondary placeholder" href="#" data-link="vote">Vote</a></div></div></section>
+<section class="community section"><div class="community-card reveal"><p class="eyebrow">COMMUNITY</p><h2>Stay connected.</h2><p>Join the Discord for server updates, announcements and the community. You can also support OverdoseSMP by voting on our server listings.</p><div class="actions"><a class="button primary placeholder" href="#" data-link="discord">Join Discord</a><a class="button secondary placeholder" href="#" data-link="vote">Vote</a></div></div></section>
 </main>
-<footer><span>OverdoseSMP</span><span>Not affiliated with Mojang or Microsoft.</span></footer><div id="toast">Server IP copied</div><script src="script.js"></script></body></html>
+<footer><span>OverdoseSMP</span><span>Not affiliated with Mojang or Microsoft.</span></footer>
+<div class="vote-modal" id="vote-modal" aria-hidden="true">
+  <div class="vote-backdrop" data-close-vote></div>
+  <div class="vote-panel" role="dialog" aria-modal="true" aria-labelledby="vote-title">
+    <button class="vote-close" type="button" aria-label="Close voting menu" data-close-vote>×</button>
+    <p class="eyebrow">SUPPORT THE SERVER</p>
+    <h2 id="vote-title">Vote for OverdoseSMP</h2>
+    <p class="vote-intro">Every vote helps more players discover the server.</p>
+    <div class="vote-sites">
+      <a href="https://minecraftservers.org/server/693954" target="_blank" rel="noopener noreferrer"><span>MinecraftServers.org</span><b>Vote ↗</b></a>
+      <a href="https://minecraft-mp.com/server-s364724" target="_blank" rel="noopener noreferrer"><span>Minecraft-MP</span><b>Vote ↗</b></a>
+      <a href="https://minecraft-server-list.com/server/523765/" target="_blank" rel="noopener noreferrer"><span>Minecraft Server List</span><b>Vote ↗</b></a>
+      <a href="https://minestatus.net/server/play.overdosesmp.online" target="_blank" rel="noopener noreferrer"><span>Minestatus</span><b>Vote ↗</b></a>
+      <a href="https://www.planetminecraft.com/server/overdosesmp/" target="_blank" rel="noopener noreferrer"><span>Planet Minecraft</span><b>Vote ↗</b></a>
+    </div>
+  </div>
+</div>
+<div id="toast">Server IP copied</div><script src="script.js"></script></body></html>
