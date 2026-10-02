@@ -347,3 +347,6 @@ body.modal-open{overflow:hidden}
   .mobile-menu-divider{height:1px;margin:7px 8px;background:rgba(255,255,255,.08)}
   #mobile-account-trigger{color:#fff}
 }
+
+/* v16.6: donation link */
+.donate-button{border-color:#8d45c4;background:#7c35bb33}.donate-button:hover{background:#7c35bb55;border-color:#a45be0}.mobile-menu .mobile-donate{color:#d9a8f6}
