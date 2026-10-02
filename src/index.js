@@ -25,6 +25,18 @@ export default {
     if (url.pathname === "/api/me" && request.method === "GET") {
       return me(request, env);
     }
+    if (url.pathname === "/api/account/username" && request.method === "POST") {
+      if (!sameOrigin(request)) return json({ error: "Invalid request." }, 403);
+      return changeUsername(request, env);
+    }
+    if (url.pathname === "/api/account/password" && request.method === "POST") {
+      if (!sameOrigin(request)) return json({ error: "Invalid request." }, 403);
+      return changePassword(request, env);
+    }
+    if (url.pathname === "/api/account/delete" && request.method === "POST") {
+      if (!sameOrigin(request)) return json({ error: "Invalid request." }, 403);
+      return deleteAccount(request, env);
+    }
     if (url.pathname.startsWith("/api/")) return json({ error: "Not found." }, 404);
 
     return env.ASSETS.fetch(request);
@@ -84,12 +96,70 @@ async function me(request, env) {
   if (!token) return json({ authenticated: false });
   const now = Date.now();
   const sessionId = await sha256Hex(token);
-  const row = await env.DB.prepare(`SELECT a.id, a.username, a.email, m.minecraft_uuid, m.minecraft_username, m.linked_at
+  const row = await env.DB.prepare(`SELECT a.id, a.username, a.email, a.created_at, m.minecraft_uuid, m.minecraft_username, m.linked_at
     FROM sessions s JOIN accounts a ON a.id = s.account_id
     LEFT JOIN minecraft_accounts m ON m.account_id = a.id
     WHERE s.id = ? AND s.expires_at > ? LIMIT 1`).bind(sessionId, now).first();
   if (!row) return json({ authenticated: false }, 200, { "Set-Cookie": clearSessionCookie() });
-  return json({ authenticated: true, account: { id: row.id, username: row.username, email: row.email, minecraft: row.minecraft_uuid ? { uuid: row.minecraft_uuid, username: row.minecraft_username, linkedAt: row.linked_at } : null } });
+  return json({ authenticated: true, account: { id: row.id, username: row.username, email: row.email, createdAt: row.created_at, minecraft: row.minecraft_uuid ? { uuid: row.minecraft_uuid, username: row.minecraft_username, linkedAt: row.linked_at } : null } });
+}
+
+async function authenticatedAccount(request, env, includePassword = false) {
+  const token = getCookie(request, SESSION_COOKIE);
+  if (!token) return null;
+  const sessionId = await sha256Hex(token);
+  const fields = includePassword ? "a.id, a.username, a.email, a.password_hash" : "a.id, a.username, a.email";
+  return env.DB.prepare(`SELECT ${fields} FROM sessions s JOIN accounts a ON a.id = s.account_id WHERE s.id = ? AND s.expires_at > ? LIMIT 1`).bind(sessionId, Date.now()).first();
+}
+
+async function changeUsername(request, env) {
+  const account = await authenticatedAccount(request, env, true);
+  if (!account) return json({ error: "You must be logged in." }, 401);
+  const body = await readJson(request);
+  const username = String(body?.username || "").trim();
+  const password = String(body?.password || "");
+  if (!/^[A-Za-z0-9_]{3,24}$/.test(username)) return json({ error: "Username must be 3–24 characters using letters, numbers or _." }, 400);
+  if (!(await verifyPassword(password, account.password_hash))) return json({ error: "Current password is incorrect." }, 401);
+  if (username.toLowerCase() === account.username.toLowerCase()) return json({ error: "Choose a different username." }, 400);
+  const taken = await env.DB.prepare("SELECT 1 FROM accounts WHERE username = ? COLLATE NOCASE AND id != ? LIMIT 1").bind(username, account.id).first();
+  if (taken) return json({ error: "That username is already taken." }, 409);
+  await env.DB.prepare("UPDATE accounts SET username = ? WHERE id = ?").bind(username, account.id).run();
+  return json({ ok: true, username });
+}
+
+async function changePassword(request, env) {
+  const account = await authenticatedAccount(request, env, true);
+  if (!account) return json({ error: "You must be logged in." }, 401);
+  const body = await readJson(request);
+  const currentPassword = String(body?.currentPassword || "");
+  const newPassword = String(body?.newPassword || "");
+  if (!(await verifyPassword(currentPassword, account.password_hash))) return json({ error: "Current password is incorrect." }, 401);
+  if (newPassword.length < 8 || newPassword.length > 128) return json({ error: "New password must be 8–128 characters." }, 400);
+  if (currentPassword === newPassword) return json({ error: "Choose a different password." }, 400);
+  const newHash = await hashPassword(newPassword);
+  const token = getCookie(request, SESSION_COOKIE);
+  const currentSession = token ? await sha256Hex(token) : "";
+  await env.DB.batch([
+    env.DB.prepare("UPDATE accounts SET password_hash = ? WHERE id = ?").bind(newHash, account.id),
+    env.DB.prepare("DELETE FROM sessions WHERE account_id = ? AND id != ?").bind(account.id, currentSession)
+  ]);
+  return json({ ok: true });
+}
+
+async function deleteAccount(request, env) {
+  const account = await authenticatedAccount(request, env, true);
+  if (!account) return json({ error: "You must be logged in." }, 401);
+  const body = await readJson(request);
+  const password = String(body?.password || "");
+  const confirmation = String(body?.confirmation || "");
+  if (!(await verifyPassword(password, account.password_hash))) return json({ error: "Current password is incorrect." }, 401);
+  if (confirmation !== account.username) return json({ error: "Type your username exactly to confirm deletion." }, 400);
+  await env.DB.batch([
+    env.DB.prepare("DELETE FROM sessions WHERE account_id = ?").bind(account.id),
+    env.DB.prepare("DELETE FROM minecraft_accounts WHERE account_id = ?").bind(account.id),
+    env.DB.prepare("DELETE FROM accounts WHERE id = ?").bind(account.id)
+  ]);
+  return json({ ok: true }, 200, { "Set-Cookie": clearSessionCookie() });
 }
 
 async function createSession(env, accountId, account, status = 200) {

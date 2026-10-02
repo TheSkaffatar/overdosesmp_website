@@ -127,16 +127,89 @@
       <p class="account-switch">Already have an account? <button type="button" id="show-login">Log In</button></p>
     </div>
 
-    <div id="profile-view" hidden>
-      <p class="eyebrow">YOUR PROFILE</p>
-      <h2 id="profile-username">Account</h2>
-      <div class="profile-card">
-        <div><span>Website account</span><strong id="profile-email"></strong></div>
-        <div><span>Minecraft Account</span><strong id="minecraft-status">Not linked</strong></div>
+  </div>
+</div>
+
+<section class="profile-page" id="profile-page" aria-hidden="true">
+  <div class="profile-shell">
+    <header class="profile-topbar">
+      <button class="profile-brand" id="profile-home" type="button">OverdoseSMP</button>
+      <div class="profile-top-actions">
+        <span class="profile-top-user" id="profile-top-user"></span>
+        <button class="nav-button" id="profile-back" type="button">Back to Server</button>
       </div>
-      <p class="profile-note">Minecraft linking with <code>/verify</code> is the next step.</p>
-      <button class="button secondary wide" id="logout-button" type="button">Log Out</button>
+    </header>
+
+    <div class="profile-content">
+      <div class="profile-heading">
+        <div><p class="eyebrow">PLAYER PORTAL</p><h1>Profile</h1><p>Your OverdoseSMP account, Minecraft identity and server activity.</p></div>
+      </div>
+
+      <div class="profile-grid profile-overview">
+        <article class="portal-card identity-card">
+          <div class="mc-avatar" id="mc-avatar">OD</div>
+          <div><span class="card-kicker">PLAYER</span><h2 id="profile-username">Account</h2><p id="profile-minecraft-sub">Minecraft account not linked</p><span class="status-pill" id="minecraft-status">Not linked</span></div>
+        </article>
+        <article class="portal-card account-summary">
+          <span class="card-kicker">ACCOUNT</span>
+          <dl><div><dt>Username</dt><dd id="profile-account-username"></dd></div><div><dt>Email</dt><dd id="profile-email"></dd></div><div><dt>Member since</dt><dd id="profile-created">—</dd></div></dl>
+        </article>
+      </div>
+
+      <div class="profile-section-heading"><div><span class="card-kicker">MINECRAFT</span><h2>Server activity</h2></div></div>
+      <div class="stat-grid">
+        <article class="stat-card"><span>KILLS</span><strong>—</strong><small>Available after linking</small></article>
+        <article class="stat-card"><span>DEATHS</span><strong>—</strong><small>Available after linking</small></article>
+        <article class="stat-card"><span>PLAYTIME</span><strong>—</strong><small>Available after linking</small></article>
+      </div>
+      <article class="portal-card minecraft-link-card">
+        <div><span class="card-kicker">MINECRAFT ACCOUNT</span><h3 id="link-title">Connect your player</h3><p id="link-description">Run <code>/verify</code> in-game. You'll receive a temporary code that can be entered here once verification is enabled.</p></div>
+        <button class="button primary" id="link-minecraft-button" type="button" disabled>Link Minecraft Account</button>
+      </article>
+
+      <div class="profile-section-heading settings-heading"><div><span class="card-kicker">ACCOUNT</span><h2>Settings</h2></div></div>
+      <div class="settings-grid">
+        <article class="portal-card setting-card">
+          <div><h3>Change username</h3><p>Update the username shown on your OverdoseSMP website account.</p></div>
+          <form id="username-form" class="settings-form">
+            <input name="username" placeholder="New username" minlength="3" maxlength="24" pattern="[A-Za-z0-9_]+" required>
+            <input name="password" type="password" placeholder="Current password" autocomplete="current-password" required>
+            <p class="form-error" id="username-error"></p><button class="button secondary" type="submit">Change Username</button>
+          </form>
+        </article>
+        <article class="portal-card setting-card">
+          <div><h3>Change password</h3><p>Use at least 8 characters. Other active sessions will be signed out.</p></div>
+          <form id="password-form" class="settings-form">
+            <input name="currentPassword" type="password" placeholder="Current password" autocomplete="current-password" required>
+            <input name="newPassword" type="password" placeholder="New password" autocomplete="new-password" minlength="8" maxlength="128" required>
+            <input name="confirmPassword" type="password" placeholder="Confirm new password" autocomplete="new-password" minlength="8" maxlength="128" required>
+            <p class="form-error" id="password-error"></p><button class="button secondary" type="submit">Change Password</button>
+          </form>
+        </article>
+      </div>
+
+      <div class="profile-section-heading danger-heading"><div><span class="card-kicker">DANGER ZONE</span><h2>Account actions</h2></div></div>
+      <article class="portal-card danger-card">
+        <div><h3>Delete account</h3><p>Permanently delete your website account and linked Minecraft identity. This cannot be undone.</p></div>
+        <button class="danger-button" id="open-delete" type="button">Delete Account</button>
+      </article>
+      <button class="profile-logout" id="logout-button" type="button">Log Out</button>
     </div>
+  </div>
+</section>
+
+<div class="confirm-modal" id="delete-modal" aria-hidden="true">
+  <div class="account-backdrop" data-close-delete></div>
+  <div class="account-panel compact-panel" role="dialog" aria-modal="true">
+    <button class="account-close" type="button" data-close-delete>×</button>
+    <p class="eyebrow danger-text">DELETE ACCOUNT</p><h2>This cannot be undone.</h2>
+    <p class="account-intro">Enter your password and type <strong id="delete-username-label"></strong> to permanently delete this account.</p>
+    <form id="delete-form" class="account-form">
+      <label>Current password<input name="password" type="password" autocomplete="current-password" required></label>
+      <label>Type your username<input name="confirmation" autocomplete="off" required></label>
+      <p class="form-error" id="delete-error"></p>
+      <button class="danger-button wide" type="submit">Permanently Delete Account</button>
+    </form>
   </div>
 </div>
 <div id="toast">Server IP copied</div><script src="script.js"></script></body></html>

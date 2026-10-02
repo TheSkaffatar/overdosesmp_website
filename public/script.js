@@ -22,25 +22,50 @@ voteTriggers.forEach(a=>a.addEventListener("click",openVoteModal));
 voteModal?.querySelectorAll("[data-close-vote]").forEach(x=>x.addEventListener("click",closeVoteModal));
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&voteModal?.classList.contains("open"))closeVoteModal()});
 
-// v12: website accounts
+// v13: website accounts + full player portal
 const accountModal=document.getElementById("account-modal");
 const accountTrigger=document.getElementById("account-trigger");
 const authView=document.getElementById("auth-view");
 const registerView=document.getElementById("register-view");
-const profileView=document.getElementById("profile-view");
 const loginForm=document.getElementById("login-form");
 const registerForm=document.getElementById("register-form");
+const profilePage=document.getElementById("profile-page");
+const deleteModal=document.getElementById("delete-modal");
 let currentAccount=null,accountLastFocus=null;
-function setAccountView(view){authView.hidden=view!=="login";registerView.hidden=view!=="register";profileView.hidden=view!=="profile"}
-function renderAccount(account){currentAccount=account||null;accountTrigger.textContent=account?.username||"Log In";if(account){document.getElementById("profile-username").textContent=account.username;document.getElementById("profile-email").textContent=account.email;const mc=document.getElementById("minecraft-status");mc.textContent=account.minecraft?account.minecraft.username:"Not linked"}}
-function openAccount(){accountLastFocus=document.activeElement;setAccountView(currentAccount?"profile":"login");accountModal.classList.add("open");accountModal.setAttribute("aria-hidden","false");document.body.classList.add("modal-open");setTimeout(()=>accountModal.querySelector(currentAccount?"#logout-button":"input")?.focus(),0)}
+function setAccountView(view){authView.hidden=view!=="login";registerView.hidden=view!=="register"}
+function formatDate(ms){if(!ms)return "—";return new Intl.DateTimeFormat(undefined,{year:"numeric",month:"short",day:"numeric"}).format(new Date(ms))}
+function renderAccount(account){
+  currentAccount=account||null;accountTrigger.textContent=account?.username||"Log In";
+  if(!account)return;
+  document.getElementById("profile-username").textContent=account.username;
+  document.getElementById("profile-account-username").textContent=account.username;
+  document.getElementById("profile-top-user").textContent=account.username;
+  document.getElementById("profile-email").textContent=account.email;
+  document.getElementById("profile-created").textContent=formatDate(account.createdAt);
+  document.getElementById("delete-username-label").textContent=account.username;
+  const mc=document.getElementById("minecraft-status"),sub=document.getElementById("profile-minecraft-sub"),linkTitle=document.getElementById("link-title"),linkDesc=document.getElementById("link-description"),linkBtn=document.getElementById("link-minecraft-button"),avatar=document.getElementById("mc-avatar");
+  if(account.minecraft){mc.textContent="Linked ✓";sub.textContent=account.minecraft.username;linkTitle.textContent="Minecraft connected";linkDesc.textContent=`${account.minecraft.username} is linked to this account.`;linkBtn.textContent="Minecraft Linked";avatar.textContent=account.minecraft.username.slice(0,2).toUpperCase()}else{mc.textContent="Not linked";sub.textContent="Minecraft account not linked";linkTitle.textContent="Connect your player";linkDesc.innerHTML='Run <code>/verify</code> in-game. You’ll receive a temporary code that can be entered here once verification is enabled.';linkBtn.textContent="Link Minecraft Account";avatar.textContent=account.username.slice(0,2).toUpperCase()}
+}
+function openAccount(){if(currentAccount){openProfile();return}accountLastFocus=document.activeElement;setAccountView("login");accountModal.classList.add("open");accountModal.setAttribute("aria-hidden","false");document.body.classList.add("modal-open");setTimeout(()=>accountModal.querySelector("input")?.focus(),0)}
 function closeAccount(){accountModal.classList.remove("open");accountModal.setAttribute("aria-hidden","true");document.body.classList.remove("modal-open");accountLastFocus?.focus()}
+function openProfile(push=true){if(!currentAccount)return openAccount();closeAccount();renderAccount(currentAccount);profilePage.classList.add("open");profilePage.setAttribute("aria-hidden","false");document.body.classList.add("body-profile-open");profilePage.scrollTop=0;if(push&&location.pathname!=="/profile")history.pushState({profile:true},"","/profile")}
+function closeProfile(push=true){profilePage.classList.remove("open");profilePage.setAttribute("aria-hidden","true");document.body.classList.remove("body-profile-open");if(push&&location.pathname==="/profile")history.pushState({},"","/")}
 async function api(path,options={}){const r=await fetch(path,{credentials:"same-origin",...options,headers:{"Content-Type":"application/json",...(options.headers||{})}});let data={};try{data=await r.json()}catch{}if(!r.ok)throw new Error(data.error||"Something went wrong.");return data}
-async function refreshAccount(){try{const data=await api("/api/me",{method:"GET",headers:{}});renderAccount(data.authenticated?data.account:null)}catch{renderAccount(null)}}
+async function refreshAccount(){try{const data=await api("/api/me",{method:"GET",headers:{}});renderAccount(data.authenticated?data.account:null);if(location.pathname==="/profile"){if(currentAccount)openProfile(false);else history.replaceState({},"","/")}}catch{renderAccount(null);if(location.pathname==="/profile")history.replaceState({},"","/")}}
 accountTrigger?.addEventListener("click",openAccount);accountModal?.querySelectorAll("[data-close-account]").forEach(x=>x.addEventListener("click",closeAccount));
 document.getElementById("show-register")?.addEventListener("click",()=>setAccountView("register"));document.getElementById("show-login")?.addEventListener("click",()=>setAccountView("login"));
-loginForm?.addEventListener("submit",async e=>{e.preventDefault();const err=document.getElementById("login-error");err.textContent="";const btn=loginForm.querySelector("button[type=submit]");btn.disabled=true;try{const f=new FormData(loginForm);const data=await api("/api/login",{method:"POST",body:JSON.stringify({login:f.get("login"),password:f.get("password")})});renderAccount(data.account);loginForm.reset();setAccountView("profile");showToast("Logged in")}catch(x){err.textContent=x.message}finally{btn.disabled=false}});
-registerForm?.addEventListener("submit",async e=>{e.preventDefault();const err=document.getElementById("register-error");err.textContent="";const f=new FormData(registerForm),password=String(f.get("password")||"");if(password!==String(f.get("confirm")||"")){err.textContent="Passwords do not match.";return}const btn=registerForm.querySelector("button[type=submit]");btn.disabled=true;try{const data=await api("/api/register",{method:"POST",body:JSON.stringify({username:f.get("username"),email:f.get("email"),password})});renderAccount(data.account);registerForm.reset();setAccountView("profile");showToast("Account created")}catch(x){err.textContent=x.message}finally{btn.disabled=false}});
-document.getElementById("logout-button")?.addEventListener("click",async()=>{try{await api("/api/logout",{method:"POST",body:"{}"})}finally{renderAccount(null);setAccountView("login");showToast("Logged out")}});
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&accountModal?.classList.contains("open"))closeAccount()});
+loginForm?.addEventListener("submit",async e=>{e.preventDefault();const err=document.getElementById("login-error");err.textContent="";const btn=loginForm.querySelector("button[type=submit]");btn.disabled=true;try{const f=new FormData(loginForm);const data=await api("/api/login",{method:"POST",body:JSON.stringify({login:f.get("login"),password:f.get("password")})});renderAccount(data.account);loginForm.reset();closeAccount();openProfile();showToast("Logged in")}catch(x){err.textContent=x.message}finally{btn.disabled=false}});
+registerForm?.addEventListener("submit",async e=>{e.preventDefault();const err=document.getElementById("register-error");err.textContent="";const f=new FormData(registerForm),password=String(f.get("password")||"");if(password!==String(f.get("confirm")||"")){err.textContent="Passwords do not match.";return}const btn=registerForm.querySelector("button[type=submit]");btn.disabled=true;try{const data=await api("/api/register",{method:"POST",body:JSON.stringify({username:f.get("username"),email:f.get("email"),password})});renderAccount(data.account);registerForm.reset();closeAccount();openProfile();showToast("Account created")}catch(x){err.textContent=x.message}finally{btn.disabled=false}});
+async function doLogout(){try{await api("/api/logout",{method:"POST",body:"{}"})}finally{renderAccount(null);closeProfile();showToast("Logged out")}}
+document.getElementById("logout-button")?.addEventListener("click",doLogout);
+document.getElementById("profile-back")?.addEventListener("click",()=>closeProfile());document.getElementById("profile-home")?.addEventListener("click",()=>closeProfile());
+window.addEventListener("popstate",()=>{if(location.pathname==="/profile"&&currentAccount)openProfile(false);else closeProfile(false)});
+
+document.getElementById("username-form")?.addEventListener("submit",async e=>{e.preventDefault();const form=e.currentTarget,err=document.getElementById("username-error");err.textContent="";const btn=form.querySelector("button");btn.disabled=true;try{const f=new FormData(form);await api("/api/account/username",{method:"POST",body:JSON.stringify({username:f.get("username"),password:f.get("password")})});await refreshAccount();form.reset();showToast("Username changed")}catch(x){err.textContent=x.message}finally{btn.disabled=false}});
+document.getElementById("password-form")?.addEventListener("submit",async e=>{e.preventDefault();const form=e.currentTarget,err=document.getElementById("password-error"),f=new FormData(form),next=String(f.get("newPassword")||"");err.textContent="";if(next!==String(f.get("confirmPassword")||"")){err.textContent="Passwords do not match.";return}const btn=form.querySelector("button");btn.disabled=true;try{await api("/api/account/password",{method:"POST",body:JSON.stringify({currentPassword:f.get("currentPassword"),newPassword:next})});form.reset();showToast("Password changed")}catch(x){err.textContent=x.message}finally{btn.disabled=false}});
+function openDelete(){deleteModal.classList.add("open");deleteModal.setAttribute("aria-hidden","false");document.getElementById("delete-error").textContent=""}
+function closeDelete(){deleteModal.classList.remove("open");deleteModal.setAttribute("aria-hidden","true");document.getElementById("delete-form")?.reset()}
+document.getElementById("open-delete")?.addEventListener("click",openDelete);deleteModal?.querySelectorAll("[data-close-delete]").forEach(x=>x.addEventListener("click",closeDelete));
+document.getElementById("delete-form")?.addEventListener("submit",async e=>{e.preventDefault();const form=e.currentTarget,err=document.getElementById("delete-error"),btn=form.querySelector("button[type=submit]"),f=new FormData(form);err.textContent="";btn.disabled=true;try{await api("/api/account/delete",{method:"POST",body:JSON.stringify({password:f.get("password"),confirmation:f.get("confirmation")})});closeDelete();renderAccount(null);closeProfile();showToast("Account deleted")}catch(x){err.textContent=x.message}finally{btn.disabled=false}});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(deleteModal?.classList.contains("open"))closeDelete();else if(accountModal?.classList.contains("open"))closeAccount()});
 refreshAccount();
