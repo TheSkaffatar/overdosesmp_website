@@ -138,3 +138,86 @@ body.modal-open{overflow:hidden}
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+
+/* v16: custom text wordmark hero */
+.server-inner{
+  width:min(1040px,94vw);
+  max-width:none;
+  margin-top:clamp(220px,26vh,275px);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+.hero-wordmark{
+  position:relative;
+  width:min(900px,88vw);
+  margin:0 auto;
+  padding:0 0 16px;
+  text-align:center;
+  isolation:isolate;
+  filter:drop-shadow(0 12px 24px rgba(0,0,0,.75));
+}
+.hero-wordmark:before{
+  content:'';
+  position:absolute;
+  z-index:-1;
+  left:50%;top:48%;
+  width:76%;height:110%;
+  transform:translate(-50%,-50%);
+  background:radial-gradient(ellipse,rgba(116,35,169,.18) 0%,rgba(62,14,94,.09) 40%,transparent 72%);
+  filter:blur(24px);
+  pointer-events:none;
+}
+.hero-overdose{
+  font-family:'Space Grotesk',Inter,sans-serif;
+  font-size:clamp(72px,9.5vw,148px);
+  font-weight:700;
+  line-height:.78;
+  letter-spacing:-.085em;
+  transform:scaleX(1.08);
+  background:linear-gradient(180deg,#fff 0%,#ead9f5 22%,#9b75b2 50%,#f3e8fa 67%,#6c3f89 100%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  -webkit-text-stroke:1px rgba(239,215,255,.28);
+  text-shadow:0 0 16px rgba(211,132,255,.15),0 0 44px rgba(118,40,177,.17);
+  opacity:.96;
+}
+.hero-smp{
+  width:42%;
+  margin:clamp(18px,2.1vw,30px) auto 0 26%;
+  font-family:'Space Grotesk',Inter,sans-serif;
+  font-size:clamp(28px,3.6vw,52px);
+  font-weight:600;
+  line-height:1;
+  letter-spacing:.48em;
+  padding-left:.48em;
+  background:linear-gradient(180deg,#f4e8fa,#9c70b5 65%,#d7b7e8);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  opacity:.9;
+  position:relative;
+}
+.hero-smp:before,.hero-smp:after{
+  content:'';
+  position:absolute;
+  top:50%;
+  width:36%;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(204,132,244,.72));
+  box-shadow:0 0 8px rgba(168,75,220,.35);
+}
+.hero-smp:before{right:calc(100% + 13px)}
+.hero-smp:after{left:calc(100% + 13px);transform:scaleX(-1)}
+.hero-controls{margin-top:clamp(48px,6vh,76px)}
+.server-address{margin-top:0}
+.hero-download-action{margin-top:16px}
+@media(max-width:800px){
+  .server-inner{margin-top:clamp(205px,29vh,285px);width:96vw}
+  .hero-wordmark{width:92vw}
+  .hero-overdose{font-size:clamp(52px,15vw,92px);letter-spacing:-.075em}
+  .hero-smp{width:44%;margin-top:18px;margin-left:25%;font-size:clamp(20px,6vw,34px);letter-spacing:.38em;padding-left:.38em}
+  .hero-smp:before,.hero-smp:after{width:26%}
+  .hero-controls{margin-top:42px}
+}
