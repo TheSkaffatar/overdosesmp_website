@@ -6,6 +6,15 @@
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*"]
-  }
+    "run_worker_first": [
+      "/api/*"
+    ]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "overdosesmp",
+      "database_id": "cc89c84d-5a15-4989-94f4-e5f4124aa42b"
+    }
+  ]
 }
