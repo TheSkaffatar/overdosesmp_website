@@ -134,70 +134,71 @@
   <div class="profile-shell">
     <header class="profile-topbar">
       <button class="profile-brand" id="profile-home" type="button">OverdoseSMP</button>
-      <div class="profile-top-actions">
-        <span class="profile-top-user" id="profile-top-user"></span>
-        <button class="nav-button" id="profile-back" type="button">Back to Server</button>
-      </div>
+      <nav class="profile-nav" aria-label="Profile sections">
+        <a href="#profile-overview">Overview</a><a href="#profile-stats">Statistics</a><a href="#profile-collections">Collections</a><a href="#profile-voting">Voting</a><a href="#profile-leaderboards">Leaderboards</a><a href="#profile-settings">Settings</a>
+      </nav>
+      <div class="profile-top-actions"><span class="profile-top-user" id="profile-top-user"></span><button class="nav-button" id="profile-back" type="button">Back to Server</button></div>
     </header>
 
     <div class="profile-content">
-      <div class="profile-heading">
-        <div><p class="eyebrow">PLAYER PORTAL</p><h1>Profile</h1><p>Your OverdoseSMP account, Minecraft identity and server activity.</p></div>
-      </div>
-
-      <div class="profile-grid profile-overview">
-        <article class="portal-card identity-card">
-          <div class="mc-avatar" id="mc-avatar">OD</div>
-          <div><span class="card-kicker">PLAYER</span><h2 id="profile-username">Account</h2><p id="profile-minecraft-sub">Minecraft account not linked</p><span class="status-pill" id="minecraft-status">Not linked</span></div>
+      <section id="profile-overview" class="portal-section">
+        <div class="profile-heading"><div><p class="eyebrow">PLAYER PORTAL</p><h1>Profile</h1><p>Your OverdoseSMP identity, progress and server activity.</p></div></div>
+        <div class="profile-grid profile-overview">
+          <article class="portal-card identity-card">
+            <div class="mc-avatar" id="mc-avatar"><span id="mc-avatar-fallback">OD</span><img id="mc-avatar-image" alt="Minecraft player head" hidden></div>
+            <div class="identity-copy"><span class="card-kicker">MINECRAFT PLAYER</span><div class="player-name-line"><h2 id="profile-minecraft-name">Not linked</h2><span class="presence-dot unknown" id="presence-dot"></span><span class="presence-label" id="presence-label">Status unavailable</span></div><p id="profile-minecraft-sub">Link your Minecraft account to unlock your player profile.</p><div class="identity-meta"><span id="first-joined">First joined —</span><span>•</span><span id="last-seen">Last seen —</span></div></div>
+          </article>
+          <article class="portal-card account-summary"><span class="card-kicker">WEBSITE ACCOUNT</span><dl><div><dt>Username</dt><dd id="profile-account-username"></dd></div><div><dt>Email</dt><dd id="profile-email"></dd></div><div><dt>Member since</dt><dd id="profile-created">—</dd></div><div><dt>Minecraft</dt><dd id="minecraft-status">Not linked</dd></div></dl></article>
+        </div>
+        <article class="portal-card minecraft-link-card">
+          <div><span class="card-kicker">MINECRAFT ACCOUNT</span><h3 id="link-title">Connect your player</h3><p id="link-description">Run <code>/verify</code> in-game, click the code to copy it, then paste it here. Codes expire after 5 minutes.</p></div>
+          <form id="minecraft-link-form" class="minecraft-link-form"><input name="code" id="minecraft-code" placeholder="OD-7K4P-92QX-6R8T" autocomplete="off" spellcheck="false" maxlength="40" required><button class="button primary" id="link-minecraft-button" type="submit">Link Minecraft Account</button><p class="form-error" id="minecraft-link-error"></p></form>
         </article>
-        <article class="portal-card account-summary">
-          <span class="card-kicker">ACCOUNT</span>
-          <dl><div><dt>Username</dt><dd id="profile-account-username"></dd></div><div><dt>Email</dt><dd id="profile-email"></dd></div><div><dt>Member since</dt><dd id="profile-created">—</dd></div></dl>
-        </article>
-      </div>
+      </section>
 
-      <div class="profile-section-heading"><div><span class="card-kicker">MINECRAFT</span><h2>Server activity</h2></div></div>
-      <div class="stat-grid">
-        <article class="stat-card"><span>KILLS</span><strong>—</strong><small>Available after linking</small></article>
-        <article class="stat-card"><span>DEATHS</span><strong>—</strong><small>Available after linking</small></article>
-        <article class="stat-card"><span>PLAYTIME</span><strong>—</strong><small>Available after linking</small></article>
-      </div>
-      <article class="portal-card minecraft-link-card">
-        <div><span class="card-kicker">MINECRAFT ACCOUNT</span><h3 id="link-title">Connect your player</h3><p id="link-description">Run <code>/verify</code> in-game, click the code to copy it, then paste it here. Codes expire after 10 minutes.</p></div>
-        <form id="minecraft-link-form" class="minecraft-link-form">
-          <input name="code" id="minecraft-code" placeholder="OD-7K4P-92QX-6R8T" autocomplete="off" spellcheck="false" maxlength="40" required>
-          <button class="button primary" id="link-minecraft-button" type="submit">Link Minecraft Account</button>
-          <p class="form-error" id="minecraft-link-error"></p>
-        </form>
-      </article>
+      <section id="profile-stats" class="portal-section">
+        <div class="profile-section-heading"><div><span class="card-kicker">STATISTICS</span><h2>Server activity</h2><p>Statistics synced from your Minecraft player.</p></div></div>
+        <div class="stat-grid stat-grid-wide">
+          <article class="stat-card"><span>KILLS</span><strong id="stat-kills">—</strong><small>Player kills</small></article>
+          <article class="stat-card"><span>DEATHS</span><strong id="stat-deaths">—</strong><small>Total deaths</small></article>
+          <article class="stat-card"><span>PLAYTIME</span><strong id="stat-playtime">—</strong><small>Time on OverdoseSMP</small></article>
+          <article class="stat-card"><span>DISTANCE TRAVELED</span><strong id="stat-distance">—</strong><small>Across all movement</small></article>
+          <article class="stat-card"><span>BLOCKS MINED</span><strong id="stat-blocks">—</strong><small>Total blocks mined</small></article>
+          <article class="stat-card"><span>MONSTERS KILLED</span><strong id="stat-monsters">—</strong><small>Hostile mobs defeated</small></article>
+          <article class="stat-card accent-stat"><span>CHAMPIONS KILLED</span><strong id="stat-champions">—</strong><small>OverdoseSMP Champions</small></article>
+        </div>
+      </section>
 
-      <div class="profile-section-heading settings-heading"><div><span class="card-kicker">ACCOUNT</span><h2>Settings</h2></div></div>
-      <div class="settings-grid">
-        <article class="portal-card setting-card">
-          <div><h3>Change username</h3><p>Update the username shown on your OverdoseSMP website account.</p></div>
-          <form id="username-form" class="settings-form">
-            <input name="username" placeholder="New username" minlength="3" maxlength="24" pattern="[A-Za-z0-9_]+" required>
-            <input name="password" type="password" placeholder="Current password" autocomplete="current-password" required>
-            <p class="form-error" id="username-error"></p><button class="button secondary" type="submit">Change Username</button>
-          </form>
-        </article>
-        <article class="portal-card setting-card">
-          <div><h3>Change password</h3><p>Use at least 8 characters. Other active sessions will be signed out.</p></div>
-          <form id="password-form" class="settings-form">
-            <input name="currentPassword" type="password" placeholder="Current password" autocomplete="current-password" required>
-            <input name="newPassword" type="password" placeholder="New password" autocomplete="new-password" minlength="8" maxlength="128" required>
-            <input name="confirmPassword" type="password" placeholder="Confirm new password" autocomplete="new-password" minlength="8" maxlength="128" required>
-            <p class="form-error" id="password-error"></p><button class="button secondary" type="submit">Change Password</button>
-          </form>
-        </article>
-      </div>
+      <section id="profile-collections" class="portal-section">
+        <div class="profile-section-heading"><div><span class="card-kicker">CHALLENGES & COLLECTIBLES</span><h2>Collection progress</h2><p>Track the rare things you've discovered across the server.</p></div></div>
+        <div class="collection-grid">
+          <article class="collection-card"><div class="collection-icon">♫</div><div><span>MUSIC DISCS</span><strong>— / —</strong><p>Vanilla and custom music discs.</p></div><div class="progress-track"><i style="width:0%"></i></div></article>
+          <article class="collection-card"><div class="collection-icon">◇</div><div><span>ARMOR TRIMS</span><strong>— / —</strong><p>Vanilla and custom trim patterns.</p></div><div class="progress-track"><i style="width:0%"></i></div></article>
+          <article class="collection-card"><div class="collection-icon">✦</div><div><span>ADVANCEMENTS</span><strong>— / —</strong><p>Vanilla and OverdoseSMP challenges.</p></div><div class="progress-track"><i style="width:0%"></i></div></article>
+        </div>
+      </section>
 
-      <div class="profile-section-heading danger-heading"><div><span class="card-kicker">DANGER ZONE</span><h2>Account actions</h2></div></div>
-      <article class="portal-card danger-card">
-        <div><h3>Delete account</h3><p>Permanently delete your website account and linked Minecraft identity. This cannot be undone.</p></div>
-        <button class="danger-button" id="open-delete" type="button">Delete Account</button>
-      </article>
-      <button class="profile-logout" id="logout-button" type="button">Log Out</button>
+      <section id="profile-voting" class="portal-section">
+        <div class="profile-section-heading"><div><span class="card-kicker">VOTING</span><h2>Vote activity</h2><p>Your voting history and current streak.</p></div></div>
+        <div class="vote-profile-grid"><article class="portal-card vote-summary-card"><span class="card-kicker">TOTAL VOTES</span><strong>—</strong><p>Votes across all supported server lists.</p></article><article class="portal-card vote-summary-card"><span class="card-kicker">CURRENT STREAK</span><strong>—</strong><p>Consecutive days supporting OverdoseSMP.</p></article><article class="portal-card vote-summary-card vote-action-card"><span class="card-kicker">TODAY</span><strong>Vote</strong><p>Check which server lists are still available today.</p><button class="button secondary" type="button" data-open-vote>Open Voting</button></article></div>
+      </section>
+
+      <section id="profile-leaderboards" class="portal-section">
+        <div class="profile-section-heading"><div><span class="card-kicker">LEADERBOARDS</span><h2>Server rankings</h2></div></div>
+        <article class="portal-card coming-soon-card"><div class="coming-mark">#</div><div><h3>Leaderboards are coming soon.</h3><p>Compare kills, playtime, collections and other server statistics with the rest of OverdoseSMP once the server gets underway.</p></div></article>
+      </section>
+
+      <section id="profile-settings" class="portal-section">
+        <div class="profile-section-heading settings-heading"><div><span class="card-kicker">ACCOUNT</span><h2>Settings</h2></div></div>
+        <div class="settings-grid">
+          <article class="portal-card setting-card"><div><h3>Change username</h3><p>Update the username shown on your OverdoseSMP website account.</p></div><form id="username-form" class="settings-form"><input name="username" placeholder="New username" minlength="3" maxlength="24" pattern="[A-Za-z0-9_]+" required><input name="password" type="password" placeholder="Current password" autocomplete="current-password" required><p class="form-error" id="username-error"></p><button class="button secondary" type="submit">Change Username</button></form></article>
+          <article class="portal-card setting-card"><div><h3>Change password</h3><p>Use at least 8 characters. Other active sessions will be signed out.</p></div><form id="password-form" class="settings-form"><input name="currentPassword" type="password" placeholder="Current password" autocomplete="current-password" required><input name="newPassword" type="password" placeholder="New password" autocomplete="new-password" minlength="8" maxlength="128" required><input name="confirmPassword" type="password" placeholder="Confirm new password" autocomplete="new-password" minlength="8" maxlength="128" required><p class="form-error" id="password-error"></p><button class="button secondary" type="submit">Change Password</button></form></article>
+          <article class="portal-card setting-card"><div><h3>Linked Minecraft account</h3><p>Manage the Minecraft identity connected to this website account.</p></div><button class="button secondary" type="button" disabled>Unlink Minecraft Account</button><small class="setting-note">Account unlinking will be enabled with player-data sync.</small></article>
+        </div>
+        <div class="profile-section-heading danger-heading"><div><span class="card-kicker">DANGER ZONE</span><h2>Account actions</h2></div></div>
+        <article class="portal-card danger-card"><div><h3>Delete account</h3><p>Permanently delete your website account and linked Minecraft identity. This cannot be undone.</p></div><button class="danger-button" id="open-delete" type="button">Delete Account</button></article>
+        <button class="profile-logout" id="logout-button" type="button">Log Out</button>
+      </section>
     </div>
   </div>
 </section>

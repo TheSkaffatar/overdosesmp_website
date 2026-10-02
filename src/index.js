@@ -47,6 +47,13 @@ export default {
     }
     if (url.pathname.startsWith("/api/")) return json({ error: "Not found." }, 404);
 
+    // SPA-style fallback: direct visits/refreshes such as /profile should load
+    // the app shell instead of asking the static asset binding for a missing file.
+    if (request.method === "GET" && !url.pathname.includes(".")) {
+      const shellUrl = new URL(request.url);
+      shellUrl.pathname = "/";
+      return env.ASSETS.fetch(new Request(shellUrl, request));
+    }
     return env.ASSETS.fetch(request);
   }
 };
