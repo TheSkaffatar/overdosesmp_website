@@ -139,85 +139,116 @@ body.modal-open{overflow:hidden}
   -webkit-text-fill-color: transparent;
 }
 
-/* v16: custom text wordmark hero */
+/* v16.1: monumental atmospheric hero wordmark */
 .server-inner{
-  width:min(1040px,94vw);
+  width:min(1180px,96vw);
   max-width:none;
-  margin-top:clamp(220px,26vh,275px);
+  margin-top:clamp(205px,24vh,255px);
   display:flex;
   flex-direction:column;
   align-items:center;
 }
 .hero-wordmark{
   position:relative;
-  width:min(900px,88vw);
+  width:min(1080px,94vw);
   margin:0 auto;
-  padding:0 0 16px;
+  padding:18px 0 24px;
   text-align:center;
   isolation:isolate;
-  filter:drop-shadow(0 12px 24px rgba(0,0,0,.75));
+  perspective:900px;
 }
 .hero-wordmark:before{
   content:'';
   position:absolute;
-  z-index:-1;
-  left:50%;top:48%;
-  width:76%;height:110%;
+  z-index:-2;
+  left:50%;top:46%;
+  width:88%;height:145%;
   transform:translate(-50%,-50%);
-  background:radial-gradient(ellipse,rgba(116,35,169,.18) 0%,rgba(62,14,94,.09) 40%,transparent 72%);
-  filter:blur(24px);
+  background:radial-gradient(ellipse,rgba(151,63,215,.22) 0%,rgba(87,24,132,.13) 35%,rgba(12,5,18,.12) 58%,transparent 76%);
+  filter:blur(30px);
+  pointer-events:none;
+}
+.hero-wordmark:after{
+  content:'';
+  position:absolute;
+  z-index:-1;
+  left:50%;top:47%;
+  width:74%;height:72%;
+  transform:translate(-50%,-50%);
+  background:radial-gradient(ellipse,rgba(0,0,0,.38),rgba(0,0,0,.12) 52%,transparent 75%);
+  filter:blur(12px);
   pointer-events:none;
 }
 .hero-overdose{
-  font-family:'Space Grotesk',Inter,sans-serif;
-  font-size:clamp(72px,9.5vw,148px);
-  font-weight:700;
-  line-height:.78;
-  letter-spacing:-.085em;
+  position:relative;
+  font-family:'Cinzel',Georgia,serif;
+  font-size:clamp(86px,10.6vw,174px);
+  font-weight:900;
+  line-height:.76;
+  letter-spacing:-.07em;
   transform:scaleX(1.08);
-  background:linear-gradient(180deg,#fff 0%,#ead9f5 22%,#9b75b2 50%,#f3e8fa 67%,#6c3f89 100%);
+  background:linear-gradient(180deg,#fff 0%,#f5eefe 15%,#b99bc9 34%,#68437e 49%,#d8c0e4 57%,#f5edfa 70%,#7c4b99 100%);
   -webkit-background-clip:text;
   background-clip:text;
   color:transparent;
-  -webkit-text-stroke:1px rgba(239,215,255,.28);
-  text-shadow:0 0 16px rgba(211,132,255,.15),0 0 44px rgba(118,40,177,.17);
-  opacity:.96;
+  -webkit-text-stroke:1.4px rgba(248,232,255,.52);
+  text-shadow:
+    0 2px 0 rgba(255,255,255,.10),
+    0 5px 0 rgba(35,11,49,.75),
+    0 10px 13px rgba(0,0,0,.92),
+    0 0 14px rgba(223,158,255,.22),
+    0 0 42px rgba(151,54,210,.22),
+    0 0 95px rgba(104,25,160,.18);
+  filter:drop-shadow(0 18px 15px rgba(0,0,0,.65));
+}
+.hero-overdose:after{
+  content:'OVERDOSE';
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  color:transparent;
+  -webkit-text-stroke:4px rgba(27,8,38,.76);
+  transform:translateY(5px);
+  filter:blur(.4px);
 }
 .hero-smp{
-  width:42%;
-  margin:clamp(18px,2.1vw,30px) auto 0 26%;
-  font-family:'Space Grotesk',Inter,sans-serif;
-  font-size:clamp(28px,3.6vw,52px);
-  font-weight:600;
+  position:relative;
+  width:48%;
+  margin:clamp(24px,2.5vw,38px) auto 0 26%;
+  font-family:'Cinzel',Georgia,serif;
+  font-size:clamp(27px,3.3vw,50px);
+  font-weight:700;
   line-height:1;
-  letter-spacing:.48em;
-  padding-left:.48em;
-  background:linear-gradient(180deg,#f4e8fa,#9c70b5 65%,#d7b7e8);
+  letter-spacing:.58em;
+  padding-left:.58em;
+  background:linear-gradient(180deg,#f9f1fc 0%,#c7a9d6 45%,#77508d 100%);
   -webkit-background-clip:text;
   background-clip:text;
   color:transparent;
-  opacity:.9;
-  position:relative;
+  -webkit-text-stroke:.7px rgba(240,216,252,.38);
+  text-shadow:0 4px 8px rgba(0,0,0,.8),0 0 18px rgba(178,83,229,.24);
 }
 .hero-smp:before,.hero-smp:after{
   content:'';
   position:absolute;
-  top:50%;
-  width:36%;
-  height:1px;
-  background:linear-gradient(90deg,transparent,rgba(204,132,244,.72));
-  box-shadow:0 0 8px rgba(168,75,220,.35);
+  top:48%;
+  width:42%;
+  height:2px;
+  background:linear-gradient(90deg,transparent,rgba(230,190,250,.22) 24%,rgba(217,154,248,.86) 76%,rgba(255,245,255,.72));
+  box-shadow:0 0 9px rgba(168,75,220,.42),0 2px 7px rgba(0,0,0,.8);
 }
-.hero-smp:before{right:calc(100% + 13px)}
-.hero-smp:after{left:calc(100% + 13px);transform:scaleX(-1)}
-.hero-controls{margin-top:clamp(48px,6vh,76px)}
+.hero-smp:before{right:calc(100% + 17px)}
+.hero-smp:after{left:calc(100% + 17px);transform:scaleX(-1)}
+.hero-controls{margin-top:clamp(54px,6.5vh,82px)}
 .server-address{margin-top:0}
 .hero-download-action{margin-top:16px}
 @media(max-width:800px){
-  .server-inner{margin-top:clamp(205px,29vh,285px);width:96vw}
-  .hero-wordmark{width:92vw}
-  .hero-overdose{font-size:clamp(52px,15vw,92px);letter-spacing:-.075em}
-  .hero-smp{width:44%;margin-top:18px;margin-left:25%;font-size:clamp(20px,6vw,34px);letter-spacing:.38em;padding-left:.38em}
-  .hero-smp:before,.hero-smp:after{width:26%}
-  .hero-controls{margin-top:42px}
+  .server-inner{margin-top:clamp(195px,27vh,270px);width:98vw}
+  .hero-wordmark{width:95vw;padding-inline:4px}
+  .hero-overdose{font-size:clamp(50px,14.8vw,88px);letter-spacing:-.065em;-webkit-text-stroke:.8px rgba(248,232,255,.48)}
+  .hero-overdose:after{-webkit-text-stroke:2px rgba(27,8,38,.76);transform:translateY(3px)}
+  .hero-smp{width:47%;margin-top:22px;margin-left:26%;font-size:clamp(19px,5.7vw,32px);letter-spacing:.43em;padding-left:.43em}
+  .hero-smp:before,.hero-smp:after{width:28%}
+  .hero-controls{margin-top:44px}
 }
+
