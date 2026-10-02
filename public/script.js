@@ -21,3 +21,26 @@ function closeVoteModal(){if(!voteModal)return;voteModal.classList.remove("open"
 voteTriggers.forEach(a=>a.addEventListener("click",openVoteModal));
 voteModal?.querySelectorAll("[data-close-vote]").forEach(x=>x.addEventListener("click",closeVoteModal));
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&voteModal?.classList.contains("open"))closeVoteModal()});
+
+// v12: website accounts
+const accountModal=document.getElementById("account-modal");
+const accountTrigger=document.getElementById("account-trigger");
+const authView=document.getElementById("auth-view");
+const registerView=document.getElementById("register-view");
+const profileView=document.getElementById("profile-view");
+const loginForm=document.getElementById("login-form");
+const registerForm=document.getElementById("register-form");
+let currentAccount=null,accountLastFocus=null;
+function setAccountView(view){authView.hidden=view!=="login";registerView.hidden=view!=="register";profileView.hidden=view!=="profile"}
+function renderAccount(account){currentAccount=account||null;accountTrigger.textContent=account?.username||"Log In";if(account){document.getElementById("profile-username").textContent=account.username;document.getElementById("profile-email").textContent=account.email;const mc=document.getElementById("minecraft-status");mc.textContent=account.minecraft?account.minecraft.username:"Not linked"}}
+function openAccount(){accountLastFocus=document.activeElement;setAccountView(currentAccount?"profile":"login");accountModal.classList.add("open");accountModal.setAttribute("aria-hidden","false");document.body.classList.add("modal-open");setTimeout(()=>accountModal.querySelector(currentAccount?"#logout-button":"input")?.focus(),0)}
+function closeAccount(){accountModal.classList.remove("open");accountModal.setAttribute("aria-hidden","true");document.body.classList.remove("modal-open");accountLastFocus?.focus()}
+async function api(path,options={}){const r=await fetch(path,{credentials:"same-origin",...options,headers:{"Content-Type":"application/json",...(options.headers||{})}});let data={};try{data=await r.json()}catch{}if(!r.ok)throw new Error(data.error||"Something went wrong.");return data}
+async function refreshAccount(){try{const data=await api("/api/me",{method:"GET",headers:{}});renderAccount(data.authenticated?data.account:null)}catch{renderAccount(null)}}
+accountTrigger?.addEventListener("click",openAccount);accountModal?.querySelectorAll("[data-close-account]").forEach(x=>x.addEventListener("click",closeAccount));
+document.getElementById("show-register")?.addEventListener("click",()=>setAccountView("register"));document.getElementById("show-login")?.addEventListener("click",()=>setAccountView("login"));
+loginForm?.addEventListener("submit",async e=>{e.preventDefault();const err=document.getElementById("login-error");err.textContent="";const btn=loginForm.querySelector("button[type=submit]");btn.disabled=true;try{const f=new FormData(loginForm);const data=await api("/api/login",{method:"POST",body:JSON.stringify({login:f.get("login"),password:f.get("password")})});renderAccount(data.account);loginForm.reset();setAccountView("profile");showToast("Logged in")}catch(x){err.textContent=x.message}finally{btn.disabled=false}});
+registerForm?.addEventListener("submit",async e=>{e.preventDefault();const err=document.getElementById("register-error");err.textContent="";const f=new FormData(registerForm),password=String(f.get("password")||"");if(password!==String(f.get("confirm")||"")){err.textContent="Passwords do not match.";return}const btn=registerForm.querySelector("button[type=submit]");btn.disabled=true;try{const data=await api("/api/register",{method:"POST",body:JSON.stringify({username:f.get("username"),email:f.get("email"),password})});renderAccount(data.account);registerForm.reset();setAccountView("profile");showToast("Account created")}catch(x){err.textContent=x.message}finally{btn.disabled=false}});
+document.getElementById("logout-button")?.addEventListener("click",async()=>{try{await api("/api/logout",{method:"POST",body:"{}"})}finally{renderAccount(null);setAccountView("login");showToast("Logged out")}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&accountModal?.classList.contains("open"))closeAccount()});
+refreshAccount();
