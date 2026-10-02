@@ -37,7 +37,6 @@ function formatDate(ms){if(!ms)return "—";return new Intl.DateTimeFormat(undef
 function renderAccount(account){
   currentAccount=account||null;accountTrigger.textContent=account?.username||"Log In";
   if(!account)return;
-  document.getElementById("profile-username").textContent=account.username;
   document.getElementById("profile-account-username").textContent=account.username;
   document.getElementById("profile-top-user").textContent=account.username;
   document.getElementById("profile-email").textContent=account.email;
