@@ -37,6 +37,13 @@ export default {
       if (!sameOrigin(request)) return json({ error: "Invalid request." }, 403);
       return deleteAccount(request, env);
     }
+    if (url.pathname === "/api/account/privacy" && request.method === "POST") {
+      if (!sameOrigin(request)) return json({ error: "Invalid request." }, 403);
+      return changeProfilePrivacy(request, env);
+    }
+    if (url.pathname === "/api/players" && request.method === "GET") return listPlayers(env);
+    const publicPlayerMatch = url.pathname.match(/^\/api\/players\/([^/]+)$/);
+    if (publicPlayerMatch && request.method === "GET") return getPublicPlayer(env, decodeURIComponent(publicPlayerMatch[1]));
     const verificationMatch = url.pathname.match(/^\/api\/minecraft\/verifications\/([0-9a-fA-F-]{32,36})$/);
     if (verificationMatch && request.method === "PUT") {
       return receiveMinecraftVerification(request, env, verificationMatch[1]);
@@ -90,7 +97,7 @@ async function register(request, env) {
   } catch {
     return json({ error: "That username or email is already in use." }, 409);
   }
-  return createSession(env, id, { id, username, email, minecraft: null }, 201);
+  return createSession(env, id, { id, username, email, profilePublic: true, minecraft: null }, 201);
 }
 
 async function login(request, env) {
@@ -100,11 +107,11 @@ async function login(request, env) {
   const password = String(body.password || "");
   if (!identifier || !password) return json({ error: "Enter your username/email and password." }, 400);
 
-  const account = await env.DB.prepare("SELECT id, username, email, password_hash FROM accounts WHERE username = ? COLLATE NOCASE OR email = ? COLLATE NOCASE LIMIT 1").bind(identifier, identifier).first();
+  const account = await env.DB.prepare("SELECT id, username, email, password_hash, profile_public FROM accounts WHERE username = ? COLLATE NOCASE OR email = ? COLLATE NOCASE LIMIT 1").bind(identifier, identifier).first();
   if (!account || !(await verifyPassword(password, account.password_hash))) return json({ error: "Incorrect username/email or password." }, 401);
 
   const minecraft = await env.DB.prepare("SELECT minecraft_uuid, minecraft_username, linked_at FROM minecraft_accounts WHERE account_id = ? LIMIT 1").bind(account.id).first();
-  return createSession(env, account.id, { id: account.id, username: account.username, email: account.email, minecraft: minecraft || null });
+  return createSession(env, account.id, { id: account.id, username: account.username, email: account.email, profilePublic: Boolean(account.profile_public), minecraft: minecraft || null });
 }
 
 async function logout(request, env) {
@@ -118,12 +125,12 @@ async function me(request, env) {
   if (!token) return json({ authenticated: false });
   const now = Date.now();
   const sessionId = await sha256Hex(token);
-  const row = await env.DB.prepare(`SELECT a.id, a.username, a.email, a.created_at, m.minecraft_uuid, m.minecraft_username, m.linked_at
+  const row = await env.DB.prepare(`SELECT a.id, a.username, a.email, a.created_at, a.profile_public, m.minecraft_uuid, m.minecraft_username, m.linked_at
     FROM sessions s JOIN accounts a ON a.id = s.account_id
     LEFT JOIN minecraft_accounts m ON m.account_id = a.id
     WHERE s.id = ? AND s.expires_at > ? LIMIT 1`).bind(sessionId, now).first();
   if (!row) return json({ authenticated: false }, 200, { "Set-Cookie": clearSessionCookie() });
-  return json({ authenticated: true, account: { id: row.id, username: row.username, email: row.email, createdAt: row.created_at, minecraft: row.minecraft_uuid ? { uuid: row.minecraft_uuid, username: row.minecraft_username, linkedAt: row.linked_at } : null } });
+  return json({ authenticated: true, account: { id: row.id, username: row.username, email: row.email, createdAt: row.created_at, profilePublic: Boolean(row.profile_public), minecraft: row.minecraft_uuid ? { uuid: row.minecraft_uuid, username: row.minecraft_username, linkedAt: row.linked_at } : null } });
 }
 
 async function authenticatedAccount(request, env, includePassword = false) {
@@ -182,6 +189,42 @@ async function deleteAccount(request, env) {
     env.DB.prepare("DELETE FROM accounts WHERE id = ?").bind(account.id)
   ]);
   return json({ ok: true }, 200, { "Set-Cookie": clearSessionCookie() });
+}
+
+async function changeProfilePrivacy(request, env) {
+  const account = await authenticatedAccount(request, env);
+  if (!account) return json({ error: "You must be logged in." }, 401);
+  const body = await readJson(request);
+  if (typeof body?.profilePublic !== "boolean") return json({ error: "Invalid privacy setting." }, 400);
+  await env.DB.prepare("UPDATE accounts SET profile_public = ? WHERE id = ?").bind(body.profilePublic ? 1 : 0, account.id).run();
+  return json({ ok: true, profilePublic: body.profilePublic });
+}
+
+async function listPlayers(env) {
+  const rows = await env.DB.prepare(`SELECT a.username AS website_username, a.profile_public, m.minecraft_username
+    FROM minecraft_accounts m JOIN accounts a ON a.id = m.account_id
+    ORDER BY m.minecraft_username COLLATE NOCASE ASC`).all();
+  return json({ players: (rows.results || []).map(r => ({ username: r.minecraft_username, websiteUsername: r.website_username, public: Boolean(r.profile_public) })) });
+}
+
+async function getPublicPlayer(env, username) {
+  if (!/^[A-Za-z0-9_]{1,16}$/.test(username)) return json({ error: "Player not found." }, 404);
+  const row = await env.DB.prepare(`SELECT a.profile_public, m.minecraft_uuid, m.minecraft_username,
+      s.online, s.last_seen, s.first_joined, s.kills, s.deaths, s.playtime_ticks, s.distance_cm, s.blocks_mined, s.monsters_killed, s.champion_kills, s.hostile, s.bounty, s.updated_at
+    FROM minecraft_accounts m JOIN accounts a ON a.id = m.account_id
+    LEFT JOIN minecraft_player_stats s ON s.minecraft_uuid = m.minecraft_uuid
+    WHERE m.minecraft_username = ? COLLATE NOCASE LIMIT 1`).bind(username).first();
+  if (!row) return json({ error: "Player not found." }, 404);
+  const base = { username: row.minecraft_username, uuid: row.minecraft_uuid, public: Boolean(row.profile_public) };
+  if (!base.public) return json({ player: base });
+  if (row.updated_at == null) return json({ player: { ...base, stats: null } });
+  const now = Date.now(), fresh = now - Number(row.updated_at) <= 60000;
+  return json({ player: { ...base, stats: {
+    online: Boolean(row.online) && fresh, lastSeen: Math.max(Number(row.last_seen || 0), Number(row.updated_at || 0)) || null,
+    firstJoined: row.first_joined, kills: row.kills, deaths: row.deaths, playtimeTicks: row.playtime_ticks,
+    distanceCm: row.distance_cm, blocksMined: row.blocks_mined, monstersKilled: row.monsters_killed,
+    championKills: row.champion_kills, hostile: Boolean(row.hostile), bounty: row.bounty
+  } } });
 }
 
 async function receiveMinecraftVerification(request, env, pathUuid) {
