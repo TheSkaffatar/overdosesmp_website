@@ -107,11 +107,11 @@ async function login(request, env) {
   const password = String(body.password || "");
   if (!identifier || !password) return json({ error: "Enter your username/email and password." }, 400);
 
-  const account = await env.DB.prepare("SELECT id, username, email, password_hash, profile_public FROM accounts WHERE username = ? COLLATE NOCASE OR email = ? COLLATE NOCASE LIMIT 1").bind(identifier, identifier).first();
+  const account = await env.DB.prepare("SELECT id, username, email, password_hash, profile_public, created_at FROM accounts WHERE username = ? COLLATE NOCASE OR email = ? COLLATE NOCASE LIMIT 1").bind(identifier, identifier).first();
   if (!account || !(await verifyPassword(password, account.password_hash))) return json({ error: "Incorrect username/email or password." }, 401);
 
   const minecraft = await env.DB.prepare("SELECT minecraft_uuid, minecraft_username, linked_at FROM minecraft_accounts WHERE account_id = ? LIMIT 1").bind(account.id).first();
-  return createSession(env, account.id, { id: account.id, username: account.username, email: account.email, profilePublic: Boolean(account.profile_public), minecraft: minecraft || null });
+  return createSession(env, account.id, { id: account.id, username: account.username, email: account.email, createdAt: account.created_at, profilePublic: Boolean(account.profile_public), minecraft: minecraft ? { uuid: minecraft.minecraft_uuid, username: minecraft.minecraft_username, linkedAt: minecraft.linked_at } : null });
 }
 
 async function logout(request, env) {

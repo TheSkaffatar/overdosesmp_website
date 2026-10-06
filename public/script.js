@@ -44,7 +44,7 @@ function renderAccount(account){
   const linkForm=document.getElementById("minecraft-link-form"),codeInput=document.getElementById("minecraft-code");
   if(account.minecraft){
     mc.textContent="Linked ✓";mc.classList.remove("unlinked");sub.textContent="";sub.hidden=true;mcName.textContent=account.minecraft.username;document.getElementById("minecraft-link-card")?.classList.add("hidden");linkBtn.disabled=true;if(codeInput)codeInput.disabled=true;if(linkForm)linkForm.classList.add("linked");
-    if(avatarFallback){avatarFallback.textContent=account.minecraft.username.slice(0,2).toUpperCase();avatarFallback.hidden=true}
+    if(avatarFallback){const minecraftName=String(account.minecraft.username||account.username||"?");avatarFallback.textContent=minecraftName.slice(0,2).toUpperCase();avatarFallback.hidden=true}
     if(avatarImage){const uuid=String(account.minecraft.minecraft_uuid||account.minecraft.uuid||"").replace(/-/g,"");if(uuid){avatarImage.src=`https://mc-heads.net/avatar/${encodeURIComponent(uuid)}/96`;avatarImage.hidden=false;avatarImage.onload=()=>{avatarImage.hidden=false;if(avatarFallback)avatarFallback.hidden=true};avatarImage.onerror=()=>{avatarImage.hidden=true;if(avatarFallback)avatarFallback.hidden=false}}else{avatarImage.hidden=true;if(avatarFallback)avatarFallback.hidden=false}}
     presence?.classList.remove("online","offline");presence?.classList.add("unknown");if(presenceLabel)presenceLabel.textContent="Status sync pending";
   }else{
