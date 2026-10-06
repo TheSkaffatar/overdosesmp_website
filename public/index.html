@@ -23,7 +23,7 @@
 </div>
 </div><a class="scroll-cue" href="#about" aria-label="Scroll down"><span></span></a></section>
 
-<section class="section about" id="about"><div class="shell"><div class="heading reveal"><p class="eyebrow">ABOUT THE SERVER</p><h2>More to do. More reasons to play together.</h2><p>OverdoseSMP expands survival with custom systems, harder-to-find rewards and quality-of-life improvements. The goal is not to replace Minecraft with a giant modpack. It is to make a long-term SMP stay interesting.</p></div>
+<section class="section about" id="about"><div class="shell"><div class="heading reveal"><p class="eyebrow">ABOUT THE SERVER</p><h2>More reasons to play together.</h2><p>OverdoseSMP expands survival with custom systems, harder-to-find rewards and quality-of-life improvements. The goal is not to replace Minecraft with a giant modpack. It is to make a long-term SMP stay interesting.</p><p class="required-pack-note"><strong>One of the two official OverdoseSMP modpacks is required to play.</strong> Choose Full for the complete experience or Lite for better performance.</p></div>
 <div class="feature-grid">
 <article class="feature reveal"><b>01</b><h3>Custom progression</h3><p>New potions, enchantments and rare rewards give you more things to work toward after the usual survival milestones.</p></article>
 <article class="feature reveal"><b>02</b><h3>Better exploration</h3><p>Improved terrain and reworked progression make travelling and finding valuable places feel worthwhile again.</p></article>
@@ -68,11 +68,10 @@
 <div class="heading reveal"><p class="eyebrow">SERVER RULES</p><h2>Keep it fair. Respect other players.</h2><p>The rules are intentionally simple. Play survival normally, do not ruin other players' work, and do not use unfair advantages.</p></div>
 <div class="feature-grid rules-grid">
 <article class="feature reveal"><b>01</b><h3>No cheating</h3><p>No hacked clients, x-ray, duping, exploits, or other unfair advantages.</p></article>
-<article class="feature reveal"><b>02</b><h3>Only approved mods</h3><p>Mods outside the allowed mod list are not permitted if they provide a gameplay advantage.</p></article>
-<article class="feature reveal"><b>03</b><h3>No griefing</h3><p>Do not destroy, alter, or sabotage another player's base or builds without permission.</p></article>
-<article class="feature reveal"><b>04</b><h3>No stealing</h3><p>Do not take items from another player's base, storage, farms, or shops without permission.</p></article>
-<article class="feature reveal"><b>05</b><h3>Don't intentionally cause lag</h3><p>No lag machines or intentionally causing excessive server lag or crashes.</p></article>
-<article class="feature reveal"><b>06</b><h3>Don't bypass server mechanics</h3><p>Do not deliberately exploit bugs to bypass progression, economy systems, custom mechanics, or other server restrictions.</p></article>
+<article class="feature reveal"><b>02</b><h3>No griefing</h3><p>Do not destroy, alter, or sabotage another player's base or builds without permission.</p></article>
+<article class="feature reveal"><b>03</b><h3>No stealing</h3><p>Do not take items from another player's base, storage, farms, or shops without permission.</p></article>
+<article class="feature reveal"><b>04</b><h3>Don't intentionally cause lag</h3><p>No lag machines or intentionally causing excessive server lag or crashes.</p></article>
+<article class="feature reveal"><b>05</b><h3>Don't bypass server mechanics</h3><p>Do not deliberately exploit bugs to bypass progression, economy systems, custom mechanics, or other server restrictions.</p></article>
 </div>
 <p class="pack-note reveal"><strong>Use common sense.</strong> Finding a loophole in the wording of the rules does not automatically make something allowed.</p>
 </div></section>
@@ -161,6 +160,7 @@
         </article>
       </section>
     </div>
+    <div class="profile-section-divider" aria-hidden="true"><span></span><i></i><span></span></div>
     <div class="profile-detail-layout">
       <aside class="profile-sidebar" aria-label="Profile navigation">
         <a href="#profile-stats">Statistics</a>
@@ -172,13 +172,16 @@
       <section id="profile-stats" class="portal-section">
         <div class="profile-section-heading"><div><span class="card-kicker">STATISTICS</span><h2>Server activity</h2><p>Statistics synced from your Minecraft player.</p></div></div>
         <div class="stat-grid stat-grid-wide">
-          <article class="stat-card"><span>KILLS</span><strong id="stat-kills">—</strong></article>
-          <article class="stat-card"><span>DEATHS</span><strong id="stat-deaths">—</strong></article>
-          <article class="stat-card"><span>PLAYTIME</span><strong id="stat-playtime">—</strong></article>
+          <article class="stat-card primary-stat"><span>KILLS</span><strong id="stat-kills">—</strong></article>
+          <article class="stat-card primary-stat"><span>DEATHS</span><strong id="stat-deaths">—</strong></article>
+          <article class="stat-card primary-stat"><span>PLAYTIME</span><strong id="stat-playtime">—</strong></article>
           <article class="stat-card"><span>DISTANCE TRAVELED</span><strong id="stat-distance">—</strong></article>
           <article class="stat-card"><span>BLOCKS MINED</span><strong id="stat-blocks">—</strong></article>
           <article class="stat-card"><span>MONSTERS KILLED</span><strong id="stat-monsters">—</strong></article>
-          <article class="stat-card accent-stat"><span>CHAMPIONS KILLED</span><strong id="stat-champions">—</strong></article>
+          <article class="stat-card"><span>CHAMPIONS KILLED</span><strong id="stat-champions">—</strong></article>
+          <article class="stat-card"><span>DUELS WON</span><strong id="stat-duels-won">—</strong></article>
+          <article class="stat-card"><span>DUELS LOST</span><strong id="stat-duels-lost">—</strong></article>
+          <article class="stat-card"><span>CONTRACTS COMPLETED</span><strong id="stat-contracts">—</strong></article>
         </div>
       </section>
 
@@ -222,6 +225,7 @@
 
 <section class="players-page" id="players-page" aria-hidden="true"><header class="profile-topbar players-topbar"><button class="profile-brand" id="players-home" type="button">OverdoseSMP</button><nav class="profile-site-nav" aria-label="Site navigation"><button type="button" data-players-home-target="about">About</button><button type="button" data-players-home-target="modpack">Modpack</button><button type="button" data-players-home-target="rules">Rules</button><button type="button" data-players-home-target="join">Join</button><a href="https://discord.gg/Wnt6RGzThf" target="_blank" rel="noopener noreferrer">Discord</a></nav><div class="profile-top-actions players-top-actions"><a class="nav-button donate-button" href="https://www.paypal.com/ncp/payment/R64AVHGD8FLAL" target="_blank" rel="noopener noreferrer">Donate</a><button class="nav-button placeholder" type="button" data-players-vote>Vote</button><button class="nav-button players-trigger active-page" type="button">Players</button><button class="nav-button account-trigger" id="players-account-trigger" type="button">Profile</button></div></header><div class="players-shell"><header class="players-header"><div><p class="eyebrow">COMMUNITY</p><h1>Players</h1><p>Everyone who has linked their Minecraft account.</p></div></header><div class="players-list" id="players-list"><p class="players-loading">Loading players…</p></div></div></section>
 <div class="public-profile-modal" id="public-profile-modal" aria-hidden="true"><button class="public-profile-backdrop" type="button" data-close-public-profile aria-label="Close player profile"></button><div class="public-profile-panel"><button class="settings-close" type="button" data-close-public-profile aria-label="Close player profile">×</button><div id="public-profile-content"></div></div></div>
+<div class="message-modal" id="message-modal" aria-hidden="true"><button class="public-profile-backdrop" type="button" data-close-message aria-label="Close messages"></button><div class="message-panel"><button class="settings-close" type="button" data-close-message aria-label="Close messages">×</button><div class="message-heading"><span class="card-kicker">MESSAGES</span><h2 id="message-player-name">Player</h2><p>Website and in-game messages share the same history.</p></div><div class="message-history" id="message-history"><p class="players-loading">Loading messages…</p></div><form class="message-compose" id="message-form"><input id="message-input" maxlength="256" autocomplete="off" placeholder="Write a message…" required><button class="button primary" type="submit">Send</button></form><p class="form-error" id="message-error"></p></div></div>
 <div class="confirm-modal" id="delete-modal" aria-hidden="true">
   <div class="account-backdrop" data-close-delete></div>
   <div class="account-panel compact-panel" role="dialog" aria-modal="true">

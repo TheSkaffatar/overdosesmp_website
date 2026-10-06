@@ -41,6 +41,13 @@ export default {
       if (!sameOrigin(request)) return json({ error: "Invalid request." }, 403);
       return changeProfilePrivacy(request, env);
     }
+    const webMessageMatch = url.pathname.match(/^\/api\/messages\/([^/]+)$/);
+    if (webMessageMatch && request.method === "GET") return getConversation(request, env, decodeURIComponent(webMessageMatch[1]));
+    if (webMessageMatch && request.method === "POST") { if (!sameOrigin(request)) return json({ error: "Invalid request." }, 403); return sendWebMessage(request, env, decodeURIComponent(webMessageMatch[1])); }
+    if (url.pathname === "/api/minecraft/messages/outbox" && request.method === "GET") return minecraftMessageOutbox(request, env);
+    if (url.pathname === "/api/minecraft/messages/inbound" && request.method === "POST") return receiveMinecraftMessage(request, env);
+    const deliveryMatch = url.pathname.match(/^\/api\/minecraft\/messages\/([0-9a-fA-F-]{36})\/delivered$/);
+    if (deliveryMatch && request.method === "POST") return markMinecraftMessageDelivered(request, env, deliveryMatch[1]);
     if (url.pathname === "/api/players" && request.method === "GET") return listPlayers(env);
     const publicPlayerMatch = url.pathname.match(/^\/api\/players\/([^/]+)$/);
     if (publicPlayerMatch && request.method === "GET") return getPublicPlayer(env, decodeURIComponent(publicPlayerMatch[1]));
@@ -210,7 +217,7 @@ async function listPlayers(env) {
 async function getPublicPlayer(env, username) {
   if (!/^[A-Za-z0-9_]{1,16}$/.test(username)) return json({ error: "Player not found." }, 404);
   const row = await env.DB.prepare(`SELECT a.profile_public, m.minecraft_uuid, m.minecraft_username,
-      s.online, s.last_seen, s.first_joined, s.kills, s.deaths, s.playtime_ticks, s.distance_cm, s.blocks_mined, s.monsters_killed, s.champion_kills, s.hostile, s.bounty, s.updated_at
+      s.online, s.last_seen, s.first_joined, s.kills, s.deaths, s.playtime_ticks, s.distance_cm, s.blocks_mined, s.monsters_killed, s.champion_kills, s.duels_won, s.duels_lost, s.contracts_completed, s.hostile, s.bounty, s.updated_at
     FROM minecraft_accounts m JOIN accounts a ON a.id = m.account_id
     LEFT JOIN minecraft_player_stats s ON s.minecraft_uuid = m.minecraft_uuid
     WHERE m.minecraft_username = ? COLLATE NOCASE LIMIT 1`).bind(username).first();
@@ -224,7 +231,7 @@ async function getPublicPlayer(env, username) {
     online: Boolean(row.online) && fresh, lastSeen: Math.max(Number(row.last_seen || 0), Number(row.updated_at || 0)) || null,
     firstJoined: row.first_joined, kills: row.kills, deaths: row.deaths, playtimeTicks: row.playtime_ticks,
     distanceCm: row.distance_cm, blocksMined: row.blocks_mined, monstersKilled: row.monsters_killed,
-    championKills: row.champion_kills, hostile: Boolean(row.hostile), bounty: row.bounty
+    championKills: row.champion_kills, duelsWon: row.duels_won || 0, duelsLost: row.duels_lost || 0, contractsCompleted: row.contracts_completed || 0, hostile: Boolean(row.hostile), bounty: row.bounty
   } } });
 }
 
@@ -339,9 +346,10 @@ async function receiveMinecraftPlayerStats(request, env, pathUuid) {
   const lastSeen = nullableTime("lastSeen");
   const firstJoined = nullableTime("firstJoined");
   const kills = int("kills"), deaths = int("deaths"), playtimeTicks = int("playtimeTicks"), distanceCm = int("distanceCm"), blocksMined = int("blocksMined"), monstersKilled = int("monstersKilled"), championKills = int("championKills");
+  const duelsWon = int("duelsWon", 0), duelsLost = int("duelsLost", 0), contractsCompleted = int("contractsCompleted", 0);
   const hostile = body.hostile === true || body.hostile === 1 ? 1 : 0;
   const bounty = int("bounty");
-  if (online === null || lastSeen === undefined || firstJoined === undefined || [kills,deaths,playtimeTicks,distanceCm,blocksMined,monstersKilled,championKills,bounty].some(v => v === null)) return json({ error: "Invalid player statistics." }, 400);
+  if (online === null || lastSeen === undefined || firstJoined === undefined || [kills,deaths,playtimeTicks,distanceCm,blocksMined,monstersKilled,championKills,duelsWon,duelsLost,contractsCompleted,bounty].some(v => v === null)) return json({ error: "Invalid player statistics." }, 400);
 
   const now = Date.now();
   // Core 0.2.6 may provide a source snapshot timestamp. Prefer it so a delayed
@@ -354,15 +362,16 @@ async function receiveMinecraftPlayerStats(request, env, pathUuid) {
 
   try {
     const result = await env.DB.prepare(`INSERT INTO minecraft_player_stats
-      (minecraft_uuid, online, last_seen, first_joined, kills, deaths, playtime_ticks, distance_cm, blocks_mined, monsters_killed, champion_kills, hostile, bounty, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (minecraft_uuid, online, last_seen, first_joined, kills, deaths, playtime_ticks, distance_cm, blocks_mined, monsters_killed, champion_kills, duels_won, duels_lost, contracts_completed, hostile, bounty, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(minecraft_uuid) DO UPDATE SET
         online=excluded.online, last_seen=excluded.last_seen, first_joined=COALESCE(minecraft_player_stats.first_joined, excluded.first_joined),
         kills=excluded.kills, deaths=excluded.deaths, playtime_ticks=excluded.playtime_ticks, distance_cm=excluded.distance_cm,
         blocks_mined=excluded.blocks_mined, monsters_killed=excluded.monsters_killed, champion_kills=excluded.champion_kills,
+        duels_won=excluded.duels_won, duels_lost=excluded.duels_lost, contracts_completed=excluded.contracts_completed,
         hostile=excluded.hostile, bounty=excluded.bounty, updated_at=excluded.updated_at
       WHERE excluded.updated_at >= minecraft_player_stats.updated_at`)
-      .bind(minecraftUuid, online, lastSeen, firstJoined, kills, deaths, playtimeTicks, distanceCm, blocksMined, monstersKilled, championKills, hostile, bounty, snapshotTime).run();
+      .bind(minecraftUuid, online, lastSeen, firstJoined, kills, deaths, playtimeTicks, distanceCm, blocksMined, monstersKilled, championKills, duelsWon, duelsLost, contractsCompleted, hostile, bounty, snapshotTime).run();
 
     // Only let an accepted/current snapshot update the cached username too.
     const minecraftUsername = String(body.minecraftUsername || "").trim();
@@ -382,7 +391,7 @@ async function getMinecraftPlayerStats(request, env) {
   if (!account) return json({ error: "You must be logged in." }, 401);
   const linked = await env.DB.prepare("SELECT minecraft_uuid, minecraft_username FROM minecraft_accounts WHERE account_id = ? LIMIT 1").bind(account.id).first();
   if (!linked) return json({ linked: false, stats: null });
-  const row = await env.DB.prepare(`SELECT online, last_seen, first_joined, kills, deaths, playtime_ticks, distance_cm, blocks_mined, monsters_killed, champion_kills, hostile, bounty, updated_at
+  const row = await env.DB.prepare(`SELECT online, last_seen, first_joined, kills, deaths, playtime_ticks, distance_cm, blocks_mined, monsters_killed, champion_kills, duels_won, duels_lost, contracts_completed, hostile, bounty, updated_at
     FROM minecraft_player_stats WHERE minecraft_uuid = ? LIMIT 1`).bind(linked.minecraft_uuid).first();
   if (!row) return json({ linked: true, minecraft: { uuid: linked.minecraft_uuid, username: linked.minecraft_username }, stats: null });
   const now = Date.now();
@@ -397,6 +406,53 @@ async function getMinecraftPlayerStats(request, env) {
     blocksMined: row.blocks_mined, monstersKilled: row.monsters_killed, championKills: row.champion_kills,
     hostile: Boolean(row.hostile), bounty: row.bounty, updatedAt: row.updated_at
   }});
+}
+
+async function linkedMinecraftForAccount(env, accountId) {
+  return env.DB.prepare("SELECT minecraft_uuid, minecraft_username FROM minecraft_accounts WHERE account_id = ? LIMIT 1").bind(accountId).first();
+}
+async function messagePeer(env, username) {
+  if (!/^[A-Za-z0-9_]{1,16}$/.test(username)) return null;
+  return env.DB.prepare("SELECT minecraft_uuid, minecraft_username FROM minecraft_accounts WHERE minecraft_username = ? COLLATE NOCASE LIMIT 1").bind(username).first();
+}
+async function getConversation(request, env, username) {
+  const account=await authenticatedAccount(request,env); if(!account)return json({error:"You must be logged in."},401);
+  const me=await linkedMinecraftForAccount(env,account.id); if(!me)return json({error:"Link your Minecraft account first."},403);
+  const peer=await messagePeer(env,username); if(!peer)return json({error:"Player not found."},404);
+  const rows=await env.DB.prepare(`SELECT id,sender_uuid,recipient_uuid,body,source,delivery_mode,created_at FROM player_messages
+    WHERE (sender_uuid=? AND recipient_uuid=?) OR (sender_uuid=? AND recipient_uuid=?) ORDER BY created_at ASC LIMIT 500`)
+    .bind(me.minecraft_uuid,peer.minecraft_uuid,peer.minecraft_uuid,me.minecraft_uuid).all();
+  return json({player:peer.minecraft_username,messages:(rows.results||[]).map(r=>({id:r.id,outgoing:r.sender_uuid===me.minecraft_uuid,body:r.body,source:r.source,deliveryMode:r.delivery_mode,createdAt:r.created_at}))});
+}
+async function sendWebMessage(request,env,username){
+  const account=await authenticatedAccount(request,env); if(!account)return json({error:"You must be logged in."},401);
+  const me=await linkedMinecraftForAccount(env,account.id); if(!me)return json({error:"Link your Minecraft account first."},403);
+  const peer=await messagePeer(env,username); if(!peer)return json({error:"Player not found."},404);
+  if(peer.minecraft_uuid===me.minecraft_uuid)return json({error:"You cannot message yourself."},400);
+  const body=await readJson(request),text=String(body?.body||"").trim(); if(!text||text.length>256)return json({error:"Messages must be 1–256 characters."},400);
+  const id=crypto.randomUUID(),now=Date.now(); await env.DB.prepare("INSERT INTO player_messages (id,sender_uuid,recipient_uuid,body,source,delivery_status,created_at) VALUES (?,?,?,?,?,?,?)").bind(id,me.minecraft_uuid,peer.minecraft_uuid,text,"web","pending",now).run();
+  return json({ok:true,message:{id,createdAt:now}},201);
+}
+async function requireMinecraftApi(request,env){
+  if(!env.MINECRAFT_API_TOKEN)return false; const auth=request.headers.get("Authorization")||""; return auth.startsWith("Bearer ")&&await safeSecretEqual(auth.slice(7),env.MINECRAFT_API_TOKEN);
+}
+async function minecraftMessageOutbox(request,env){
+  if(!(await requireMinecraftApi(request,env)))return json({error:"Unauthorized."},401);
+  const rows=await env.DB.prepare(`SELECT pm.id,pm.sender_uuid,sm.minecraft_username sender_username,pm.recipient_uuid,rm.minecraft_username recipient_username,pm.body,pm.created_at
+    FROM player_messages pm JOIN minecraft_accounts sm ON sm.minecraft_uuid=pm.sender_uuid JOIN minecraft_accounts rm ON rm.minecraft_uuid=pm.recipient_uuid
+    WHERE pm.source='web' AND pm.delivery_status='pending' ORDER BY pm.created_at ASC LIMIT 50`).all();
+  return json({messages:rows.results||[]});
+}
+async function markMinecraftMessageDelivered(request,env,id){
+  if(!(await requireMinecraftApi(request,env)))return json({error:"Unauthorized."},401); const body=await readJson(request); const mode=String(body?.mode||""); if(!["msg","mail"].includes(mode))return json({error:"Invalid delivery mode."},400);
+  await env.DB.prepare("UPDATE player_messages SET delivery_status='delivered',delivery_mode=?,delivered_at=? WHERE id=? AND source='web'").bind(mode,Date.now(),id).run(); return new Response(null,{status:204});
+}
+async function receiveMinecraftMessage(request,env){
+  if(!(await requireMinecraftApi(request,env)))return json({error:"Unauthorized."},401); const body=await readJson(request); if(!body)return json({error:"Invalid JSON."},400);
+  const from=normalizeUuid(String(body.fromUuid||"")),to=normalizeUuid(String(body.toUuid||"")),text=String(body.body||"").trim(),created=Number(body.createdAt||Date.now()); if(!from||!to||!text||text.length>256||!Number.isSafeInteger(created))return json({error:"Invalid message."},400);
+  const known=await env.DB.prepare("SELECT COUNT(*) n FROM minecraft_accounts WHERE minecraft_uuid IN (?,?)").bind(from,to).first(); if(Number(known?.n)!==2)return json({error:"Both players must have linked accounts."},400);
+  const id=String(body.id||crypto.randomUUID()); if(!/^[0-9a-fA-F-]{36}$/.test(id))return json({error:"Invalid message id."},400);
+  await env.DB.prepare("INSERT OR IGNORE INTO player_messages (id,sender_uuid,recipient_uuid,body,source,delivery_status,delivery_mode,created_at,delivered_at) VALUES (?,?,?,?,?,?,?,?,?)").bind(id,from,to,text,"game","delivered","msg",created,created).run(); return new Response(null,{status:204});
 }
 
 function normalizeUuid(value) {
