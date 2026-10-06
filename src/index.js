@@ -215,11 +215,12 @@ async function getPublicPlayer(env, username) {
     LEFT JOIN minecraft_player_stats s ON s.minecraft_uuid = m.minecraft_uuid
     WHERE m.minecraft_username = ? COLLATE NOCASE LIMIT 1`).bind(username).first();
   if (!row) return json({ error: "Player not found." }, 404);
-  const base = { username: row.minecraft_username, uuid: row.minecraft_uuid, public: Boolean(row.profile_public) };
+  const base = { username: row.minecraft_username, public: Boolean(row.profile_public) };
   if (!base.public) return json({ player: base });
-  if (row.updated_at == null) return json({ player: { ...base, stats: null } });
+  const publicBase = { ...base, uuid: row.minecraft_uuid };
+  if (row.updated_at == null) return json({ player: { ...publicBase, stats: null } });
   const now = Date.now(), fresh = now - Number(row.updated_at) <= 60000;
-  return json({ player: { ...base, stats: {
+  return json({ player: { ...publicBase, stats: {
     online: Boolean(row.online) && fresh, lastSeen: Math.max(Number(row.last_seen || 0), Number(row.updated_at || 0)) || null,
     firstJoined: row.first_joined, kills: row.kills, deaths: row.deaths, playtimeTicks: row.playtime_ticks,
     distanceCm: row.distance_cm, blocksMined: row.blocks_mined, monstersKilled: row.monsters_killed,
