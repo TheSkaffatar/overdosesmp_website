@@ -406,3 +406,7 @@ body.modal-open{overflow:hidden}
 .player-list-message:hover{background:rgba(157,69,207,.22);border-color:rgba(202,124,244,.65);box-shadow:0 0 18px rgba(155,66,207,.16);transform:translateY(-1px)}
 .player-row:focus-visible{outline:2px solid rgba(201,133,239,.8);outline-offset:2px}
 @media(max-width:560px){.player-list-message{padding:8px 11px}.player-row{gap:11px;padding:12px}.player-list-avatar,.player-list-avatar img{width:44px;height:44px}}
+
+/* v18.3: overlays must render above the fixed Players page. */
+.public-profile-modal{z-index:95}
+.message-modal{z-index:105}
