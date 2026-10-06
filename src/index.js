@@ -1,9 +1,15 @@
 const SESSION_COOKIE = "od_session";
 const SESSION_DAYS = 30;
-const PBKDF2_ITERATIONS = 100000;
+const PBKDF2_ITERATIONS = 310000;
 
 export default {
   async fetch(request, env) {
+    const response = await handleRequest(request, env);
+    return withSecurityHeaders(response);
+  }
+};
+
+async function handleRequest(request, env) {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/health") {
@@ -76,10 +82,10 @@ export default {
       return env.ASSETS.fetch(new Request(shellUrl, request));
     }
     return env.ASSETS.fetch(request);
-  }
-};
+}
 
 async function register(request, env) {
+  if (!(await allowRequest(env, request, "register", 5, 3600))) return json({ error: "Too many attempts. Try again later." }, 429);
   const body = await readJson(request);
   if (!body) return json({ error: "Invalid request." }, 400);
   const username = String(body.username || "").trim();
@@ -108,6 +114,7 @@ async function register(request, env) {
 }
 
 async function login(request, env) {
+  if (!(await allowRequest(env, request, "login", 12, 900))) return json({ error: "Too many login attempts. Try again later." }, 429);
   const body = await readJson(request);
   if (!body) return json({ error: "Invalid request." }, 400);
   const identifier = String(body.login || "").trim();
@@ -224,7 +231,7 @@ async function getPublicPlayer(env, username) {
   if (!row) return json({ error: "Player not found." }, 404);
   const base = { username: row.minecraft_username, public: Boolean(row.profile_public) };
   if (!base.public) return json({ player: base });
-  const publicBase = { ...base, uuid: row.minecraft_uuid };
+  const publicBase = base;
   if (row.updated_at == null) return json({ player: { ...publicBase, stats: null } });
   const now = Date.now(), fresh = now - Number(row.updated_at) <= 60000;
   return json({ player: { ...publicBase, stats: {
@@ -292,6 +299,7 @@ async function receiveMinecraftVerification(request, env, pathUuid) {
 }
 
 async function linkMinecraftAccount(request, env) {
+  if (!(await allowRequest(env, request, "minecraft-link", 12, 600))) return json({ error: "Too many verification attempts. Try again later." }, 429);
   const account = await authenticatedAccount(request, env);
   if (!account) return json({ error: "You must be logged in." }, 401);
   const body = await readJson(request);
@@ -425,6 +433,7 @@ async function getConversation(request, env, username) {
   return json({player:peer.minecraft_username,messages:(rows.results||[]).map(r=>({id:r.id,outgoing:r.sender_uuid===me.minecraft_uuid,body:r.body,source:r.source,deliveryMode:r.delivery_mode,createdAt:r.created_at}))});
 }
 async function sendWebMessage(request,env,username){
+  if (!(await allowRequest(env, request, "message", 30, 60))) return json({error:"You are sending messages too quickly."},429);
   const account=await authenticatedAccount(request,env); if(!account)return json({error:"You must be logged in."},401);
   const me=await linkedMinecraftForAccount(env,account.id); if(!me)return json({error:"Link your Minecraft account first."},403);
   const peer=await messagePeer(env,username); if(!peer)return json({error:"Player not found."},404);
@@ -449,7 +458,7 @@ async function markMinecraftMessageDelivered(request,env,id){
 }
 async function receiveMinecraftMessage(request,env){
   if(!(await requireMinecraftApi(request,env)))return json({error:"Unauthorized."},401); const body=await readJson(request); if(!body)return json({error:"Invalid JSON."},400);
-  const from=normalizeUuid(String(body.fromUuid||"")),to=normalizeUuid(String(body.toUuid||"")),text=String(body.body||"").trim(),created=Number(body.createdAt||Date.now()); if(!from||!to||!text||text.length>256||!Number.isSafeInteger(created))return json({error:"Invalid message."},400);
+  const from=normalizeUuid(String(body.fromUuid||"")),to=normalizeUuid(String(body.toUuid||"")),text=String(body.body||"").trim(),created=Number(body.createdAt||Date.now()); if(!from||!to||!text||text.length>256||!Number.isSafeInteger(created)||Math.abs(Date.now()-created)>86400000)return json({error:"Invalid message."},400);
   const known=await env.DB.prepare("SELECT COUNT(*) n FROM minecraft_accounts WHERE minecraft_uuid IN (?,?)").bind(from,to).first(); if(Number(known?.n)!==2)return json({error:"Both players must have linked accounts."},400);
   const id=String(body.id||crypto.randomUUID()); if(!/^[0-9a-fA-F-]{36}$/.test(id))return json({error:"Invalid message id."},400);
   await env.DB.prepare("INSERT OR IGNORE INTO player_messages (id,sender_uuid,recipient_uuid,body,source,delivery_status,delivery_mode,created_at,delivered_at) VALUES (?,?,?,?,?,?,?,?,?)").bind(id,from,to,text,"game","delivered","msg",created,created).run(); return new Response(null,{status:204});
@@ -502,10 +511,44 @@ async function verifyPassword(password, stored) {
 }
 
 function sameOrigin(request) {
+  const site = request.headers.get("Sec-Fetch-Site");
+  if (site === "cross-site") return false;
   const origin = request.headers.get("Origin");
   if (!origin) return true;
   return origin === new URL(request.url).origin;
 }
+
+async function allowRequest(env, request, bucket, limit, windowSeconds) {
+  try {
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    const key = await sha256Hex(`${bucket}:${ip}`);
+    const windowMs = windowSeconds * 1000;
+    const now = Date.now();
+    const windowStart = Math.floor(now / windowMs) * windowMs;
+    await env.DB.prepare(`INSERT INTO api_rate_limits (rate_key, window_start, hits) VALUES (?, ?, 1)
+      ON CONFLICT(rate_key, window_start) DO UPDATE SET hits = hits + 1`).bind(key, windowStart).run();
+    const row = await env.DB.prepare("SELECT hits FROM api_rate_limits WHERE rate_key = ? AND window_start = ?").bind(key, windowStart).first();
+    // Opportunistic cleanup keeps this tiny without a scheduled job.
+    if (Math.random() < 0.01) await env.DB.prepare("DELETE FROM api_rate_limits WHERE window_start < ?").bind(now - 86400000).run();
+    return Number(row?.hits || 0) <= limit;
+  } catch (e) {
+    console.error("Rate limit check failed", e?.message || e);
+    // Fail open so a D1 issue cannot lock every player out.
+    return true;
+  }
+}
+
+function withSecurityHeaders(response) {
+  const headers = new Headers(response.headers);
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  headers.set("X-Frame-Options", "DENY");
+  headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+  headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  headers.set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://mc-heads.net; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'");
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
 async function readJson(request) { try { return await request.json(); } catch { return null; } }
 function randomToken(bytes) { return base64Url(crypto.getRandomValues(new Uint8Array(bytes))); }
 async function sha256Hex(value) { const b = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))); return [...b].map(x => x.toString(16).padStart(2,"0")).join(""); }
