@@ -47,6 +47,18 @@ async function handleRequest(request, env) {
       if (!sameOrigin(request)) return json({ error: "Invalid request." }, 403);
       return changeProfilePrivacy(request, env);
     }
+    if (url.pathname === "/api/notifications/settings" && request.method === "GET") return getNotificationSettings(request, env);
+    if (url.pathname === "/api/notifications/settings" && request.method === "POST") { if (!sameOrigin(request)) return json({error:"Invalid request."},403); return setNotificationSettings(request, env); }
+    if (url.pathname === "/api/notifications/public-key" && request.method === "GET") return json({publicKey: env.VAPID_PUBLIC_KEY || ""});
+    if (url.pathname === "/api/notifications/subscribe" && request.method === "POST") { if (!sameOrigin(request)) return json({error:"Invalid request."},403); return subscribePush(request, env); }
+    if (url.pathname === "/api/notifications/subscribe" && request.method === "DELETE") { if (!sameOrigin(request)) return json({error:"Invalid request."},403); return unsubscribePush(request, env); }
+    if (url.pathname === "/api/notifications/events" && request.method === "GET") return getPushEvents(request, env);
+    const prefMatch = url.pathname.match(/^\/api\/messages\/([^/]+)\/preferences$/);
+    if (prefMatch && request.method === "GET") return getConversationPreferences(request, env, decodeURIComponent(prefMatch[1]));
+    if (prefMatch && request.method === "POST") { if (!sameOrigin(request)) return json({error:"Invalid request."},403); return setConversationPreferences(request, env, decodeURIComponent(prefMatch[1])); }
+    const deleteChatMatch = url.pathname.match(/^\/api\/messages\/([^/]+)\/delete$/);
+    if (deleteChatMatch && request.method === "POST") { if (!sameOrigin(request)) return json({error:"Invalid request."},403); return deleteConversation(request, env, decodeURIComponent(deleteChatMatch[1])); }
+    if (url.pathname === "/api/minecraft/messages/blocked" && request.method === "GET") return minecraftBlockedStatus(request, env);
     if (url.pathname === "/api/messages/inbox" && request.method === "GET") return getMessageInbox(request, env);
     if (url.pathname === "/api/messages/conversations" && request.method === "GET") return getMessageConversations(request, env);
     const webMessageMatch = url.pathname.match(/^\/api\/messages\/([^/]+)$/);
@@ -429,6 +441,10 @@ async function messageIdentity(request, env) {
   const account=await authenticatedAccount(request,env); if(!account)return null;
   const me=await linkedMinecraftForAccount(env,account.id); return me||null;
 }
+async function isBlocked(env, ownerUuid, peerUuid){
+  const row=await env.DB.prepare("SELECT blocked FROM message_preferences WHERE owner_uuid=? AND peer_uuid=? LIMIT 1").bind(ownerUuid,peerUuid).first();
+  return Boolean(row?.blocked);
+}
 async function getMessageInbox(request, env) {
   const me=await messageIdentity(request,env); if(!me)return json({error:"Link your Minecraft account first."},403);
   const rows=await env.DB.prepare(`SELECT pm.id,pm.sender_uuid,ma.minecraft_username sender_username,pm.body,pm.created_at
@@ -442,7 +458,8 @@ async function getMessageConversations(request, env) {
     CASE WHEN pm.sender_uuid=? THEN pm.recipient_uuid ELSE pm.sender_uuid END peer_uuid
     FROM player_messages pm WHERE pm.sender_uuid=? OR pm.recipient_uuid=? ORDER BY pm.created_at DESC LIMIT 1000`).bind(me.minecraft_uuid,me.minecraft_uuid,me.minecraft_uuid).all();
   const seen=new Set(), conversations=[];
-  for(const r of (rows.results||[])){ if(seen.has(r.peer_uuid))continue; seen.add(r.peer_uuid); const peer=await env.DB.prepare("SELECT minecraft_username FROM minecraft_accounts WHERE minecraft_uuid=? LIMIT 1").bind(r.peer_uuid).first(); if(!peer)continue; const unread=await env.DB.prepare("SELECT COUNT(*) n FROM player_messages WHERE sender_uuid=? AND recipient_uuid=? AND read_at IS NULL").bind(r.peer_uuid,me.minecraft_uuid).first(); conversations.push({username:peer.minecraft_username,lastBody:r.body,lastAt:r.created_at,unread:Number(unread?.n||0)}); }
+  for(const r of (rows.results||[])){ if(seen.has(r.peer_uuid))continue; seen.add(r.peer_uuid); const peer=await env.DB.prepare("SELECT minecraft_username FROM minecraft_accounts WHERE minecraft_uuid=? LIMIT 1").bind(r.peer_uuid).first(); if(!peer)continue; const unread=await env.DB.prepare("SELECT COUNT(*) n FROM player_messages WHERE sender_uuid=? AND recipient_uuid=? AND read_at IS NULL").bind(r.peer_uuid,me.minecraft_uuid).first(); const pref=await env.DB.prepare("SELECT muted,pinned,blocked FROM message_preferences WHERE owner_uuid=? AND peer_uuid=? LIMIT 1").bind(me.minecraft_uuid,r.peer_uuid).first(); conversations.push({username:peer.minecraft_username,lastBody:r.body,lastAt:r.created_at,unread:Number(unread?.n||0),muted:Boolean(pref?.muted),pinned:Boolean(pref?.pinned),blocked:Boolean(pref?.blocked)}); }
+  conversations.sort((a,b)=>Number(b.pinned)-Number(a.pinned)||b.lastAt-a.lastAt);
   return json({conversations});
 }
 async function getConversation(request, env, username) {
@@ -453,7 +470,8 @@ async function getConversation(request, env, username) {
     WHERE (sender_uuid=? AND recipient_uuid=?) OR (sender_uuid=? AND recipient_uuid=?) ORDER BY created_at ASC LIMIT 500`)
     .bind(me.minecraft_uuid,peer.minecraft_uuid,peer.minecraft_uuid,me.minecraft_uuid).all();
   await env.DB.prepare("UPDATE player_messages SET read_at=? WHERE recipient_uuid=? AND sender_uuid=? AND read_at IS NULL").bind(Date.now(),me.minecraft_uuid,peer.minecraft_uuid).run();
-  return json({player:peer.minecraft_username,messages:(rows.results||[]).map(r=>({id:r.id,outgoing:r.sender_uuid===me.minecraft_uuid,body:r.body,source:r.source,deliveryMode:r.delivery_mode,createdAt:r.created_at}))});
+  const pref=await env.DB.prepare("SELECT muted,pinned,blocked FROM message_preferences WHERE owner_uuid=? AND peer_uuid=? LIMIT 1").bind(me.minecraft_uuid,peer.minecraft_uuid).first();
+  return json({player:peer.minecraft_username,preferences:{muted:Boolean(pref?.muted),pinned:Boolean(pref?.pinned),blocked:Boolean(pref?.blocked)},messages:(rows.results||[]).map(r=>({id:r.id,outgoing:r.sender_uuid===me.minecraft_uuid,body:r.body,source:r.source,deliveryMode:r.delivery_mode,createdAt:r.created_at}))});
 }
 async function sendWebMessage(request,env,username){
   if (!(await allowRequest(env, request, "message", 30, 60))) return json({error:"You are sending messages too quickly."},429);
@@ -462,8 +480,55 @@ async function sendWebMessage(request,env,username){
   const peer=await messagePeer(env,username); if(!peer)return json({error:"Player not found."},404);
   if(peer.minecraft_uuid===me.minecraft_uuid)return json({error:"You cannot message yourself."},400);
   const body=await readJson(request),text=String(body?.body||"").trim(); if(!text||text.length>256)return json({error:"Messages must be 1–256 characters."},400);
+  if(await isBlocked(env,peer.minecraft_uuid,me.minecraft_uuid)) return json({error:"You are no longer allowed to send chats to this player.",blocked:true},403);
   const id=crypto.randomUUID(),now=Date.now(); await env.DB.prepare("INSERT INTO player_messages (id,sender_uuid,recipient_uuid,body,source,delivery_status,created_at) VALUES (?,?,?,?,?,?,?)").bind(id,me.minecraft_uuid,peer.minecraft_uuid,text,"web","pending",now).run();
+  await queuePushEvent(env,peer.minecraft_uuid,me.minecraft_uuid,text,now);
   return json({ok:true,message:{id,createdAt:now}},201);
+}
+async function getConversationPreferences(request,env,username){
+  const me=await messageIdentity(request,env); if(!me)return json({error:"Link your Minecraft account first."},403); const peer=await messagePeer(env,username); if(!peer)return json({error:"Player not found."},404);
+  const p=await env.DB.prepare("SELECT muted,pinned,blocked FROM message_preferences WHERE owner_uuid=? AND peer_uuid=? LIMIT 1").bind(me.minecraft_uuid,peer.minecraft_uuid).first();
+  return json({muted:Boolean(p?.muted),pinned:Boolean(p?.pinned),blocked:Boolean(p?.blocked)});
+}
+async function setConversationPreferences(request,env,username){
+  const me=await messageIdentity(request,env); if(!me)return json({error:"Link your Minecraft account first."},403); const peer=await messagePeer(env,username); if(!peer)return json({error:"Player not found."},404); const b=await readJson(request); if(!b)return json({error:"Invalid request."},400);
+  const old=await env.DB.prepare("SELECT muted,pinned,blocked FROM message_preferences WHERE owner_uuid=? AND peer_uuid=? LIMIT 1").bind(me.minecraft_uuid,peer.minecraft_uuid).first();
+  const muted=b.muted===undefined?Boolean(old?.muted):Boolean(b.muted),pinned=b.pinned===undefined?Boolean(old?.pinned):Boolean(b.pinned),blocked=b.blocked===undefined?Boolean(old?.blocked):Boolean(b.blocked);
+  await env.DB.prepare(`INSERT INTO message_preferences(owner_uuid,peer_uuid,muted,pinned,blocked,updated_at) VALUES(?,?,?,?,?,?) ON CONFLICT(owner_uuid,peer_uuid) DO UPDATE SET muted=excluded.muted,pinned=excluded.pinned,blocked=excluded.blocked,updated_at=excluded.updated_at`).bind(me.minecraft_uuid,peer.minecraft_uuid,muted?1:0,pinned?1:0,blocked?1:0,Date.now()).run();
+  return json({muted,pinned,blocked});
+}
+async function deleteConversation(request,env,username){
+  const me=await messageIdentity(request,env); if(!me)return json({error:"Link your Minecraft account first."},403); const peer=await messagePeer(env,username); if(!peer)return json({error:"Player not found."},404);
+  await env.DB.batch([env.DB.prepare("DELETE FROM player_messages WHERE (sender_uuid=? AND recipient_uuid=?) OR (sender_uuid=? AND recipient_uuid=?)").bind(me.minecraft_uuid,peer.minecraft_uuid,peer.minecraft_uuid,me.minecraft_uuid),env.DB.prepare("DELETE FROM message_preferences WHERE owner_uuid=? AND peer_uuid=?").bind(me.minecraft_uuid,peer.minecraft_uuid)]);
+  return json({ok:true});
+}
+async function minecraftBlockedStatus(request,env){
+  if(!(await requireMinecraftApi(request,env)))return json({error:"Unauthorized."},401); const u=new URL(request.url),from=normalizeUuid(u.searchParams.get("fromUuid")||""),to=normalizeUuid(u.searchParams.get("toUuid")||""); if(!from||!to)return json({error:"Invalid UUID."},400);
+  return json({blocked:await isBlocked(env,to,from)});
+}
+async function getNotificationSettings(request,env){
+  const a=await authenticatedAccount(request,env); if(!a)return json({error:"You must be logged in."},401); const row=await env.DB.prepare("SELECT push_enabled,preview_enabled FROM notification_settings WHERE account_id=? LIMIT 1").bind(a.id).first(); return json({pushEnabled:Boolean(row?.push_enabled),previewEnabled:Boolean(row?.preview_enabled)});
+}
+async function setNotificationSettings(request,env){
+  const a=await authenticatedAccount(request,env); if(!a)return json({error:"You must be logged in."},401); const b=await readJson(request); if(!b)return json({error:"Invalid request."},400); const old=await env.DB.prepare("SELECT push_enabled,preview_enabled FROM notification_settings WHERE account_id=? LIMIT 1").bind(a.id).first(); const push=b.pushEnabled===undefined?Boolean(old?.push_enabled):Boolean(b.pushEnabled),preview=b.previewEnabled===undefined?Boolean(old?.preview_enabled):Boolean(b.previewEnabled); await env.DB.prepare(`INSERT INTO notification_settings(account_id,push_enabled,preview_enabled,updated_at) VALUES(?,?,?,?) ON CONFLICT(account_id) DO UPDATE SET push_enabled=excluded.push_enabled,preview_enabled=excluded.preview_enabled,updated_at=excluded.updated_at`).bind(a.id,push?1:0,preview?1:0,Date.now()).run(); return json({pushEnabled:push,previewEnabled:preview});
+}
+async function subscribePush(request,env){
+  const a=await authenticatedAccount(request,env); if(!a)return json({error:"You must be logged in."},401); if(!(await linkedMinecraftForAccount(env,a.id)))return json({error:"Link your Minecraft account first."},403); const b=await readJson(request),endpoint=String(b?.endpoint||""); if(!/^https:\/\//.test(endpoint)||endpoint.length>2048)return json({error:"Invalid push subscription."},400); await env.DB.prepare(`INSERT INTO push_subscriptions(id,account_id,endpoint,created_at) VALUES(?,?,?,?) ON CONFLICT(endpoint) DO UPDATE SET account_id=excluded.account_id`).bind(crypto.randomUUID(),a.id,endpoint,Date.now()).run(); return json({ok:true});
+}
+async function unsubscribePush(request,env){ const a=await authenticatedAccount(request,env); if(!a)return json({error:"You must be logged in."},401); const b=await readJson(request),endpoint=String(b?.endpoint||""); await env.DB.prepare("DELETE FROM push_subscriptions WHERE account_id=? AND endpoint=?").bind(a.id,endpoint).run(); return json({ok:true}); }
+async function getPushEvents(request,env){
+  const a=await authenticatedAccount(request,env); if(!a)return json({error:"You must be logged in."},401); const settings=await env.DB.prepare("SELECT preview_enabled FROM notification_settings WHERE account_id=? AND push_enabled=1 LIMIT 1").bind(a.id).first(); if(!settings)return json({events:[]}); const me=await linkedMinecraftForAccount(env,a.id); if(!me)return json({events:[]}); const rows=await env.DB.prepare(`SELECT pe.id,pe.body,pe.created_at,ma.minecraft_username sender_username FROM push_events pe JOIN minecraft_accounts ma ON ma.minecraft_uuid=pe.sender_uuid WHERE pe.recipient_uuid=? AND pe.created_at>? ORDER BY pe.created_at DESC LIMIT 20`).bind(me.minecraft_uuid,Date.now()-86400000).all(); return json({previewEnabled:Boolean(settings.preview_enabled),events:rows.results||[]});
+}
+async function queuePushEvent(env,recipientUuid,senderUuid,body,createdAt){
+  try{ await env.DB.prepare("DELETE FROM push_events WHERE created_at < ?").bind(Date.now()-604800000).run(); const recipient=await env.DB.prepare("SELECT account_id FROM minecraft_accounts WHERE minecraft_uuid=? LIMIT 1").bind(recipientUuid).first(); if(!recipient)return; const settings=await env.DB.prepare("SELECT push_enabled FROM notification_settings WHERE account_id=? LIMIT 1").bind(recipient.account_id).first(); if(!settings?.push_enabled)return; const pref=await env.DB.prepare("SELECT muted FROM message_preferences WHERE owner_uuid=? AND peer_uuid=? LIMIT 1").bind(recipientUuid,senderUuid).first(); if(pref?.muted)return; await env.DB.prepare("INSERT INTO push_events(id,recipient_uuid,sender_uuid,body,created_at) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),recipientUuid,senderUuid,body,createdAt).run(); await sendPush(env,recipient.account_id); }catch{}
+}
+function b64urlBytes(bytes){return btoa(String.fromCharCode(...bytes)).replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_")}
+function b64urlText(text){return b64urlBytes(new TextEncoder().encode(text))}
+async function vapidToken(env,endpoint){
+  if(!env.VAPID_PRIVATE_JWK||!env.VAPID_PUBLIC_KEY)return null; const jwk=JSON.parse(env.VAPID_PRIVATE_JWK),key=await crypto.subtle.importKey("jwk",jwk,{name:"ECDSA",namedCurve:"P-256"},false,["sign"]),aud=new URL(endpoint).origin,header=b64urlText(JSON.stringify({typ:"JWT",alg:"ES256"})),payload=b64urlText(JSON.stringify({aud,exp:Math.floor(Date.now()/1000)+3600,sub:"mailto:admin@overdosesmp.online"})),unsigned=header+"."+payload,sig=new Uint8Array(await crypto.subtle.sign({name:"ECDSA",hash:"SHA-256"},key,new TextEncoder().encode(unsigned))); return unsigned+"."+b64urlBytes(sig);
+}
+async function sendPush(env,accountId){
+  if(!env.VAPID_PRIVATE_JWK||!env.VAPID_PUBLIC_KEY)return; const subs=await env.DB.prepare("SELECT endpoint FROM push_subscriptions WHERE account_id=?").bind(accountId).all(); for(const sub of (subs.results||[])){try{const token=await vapidToken(env,sub.endpoint),r=await fetch(sub.endpoint,{method:"POST",headers:{TTL:"60",Authorization:`vapid t=${token}, k=${env.VAPID_PUBLIC_KEY}`}}); if(r.status===404||r.status===410)await env.DB.prepare("DELETE FROM push_subscriptions WHERE endpoint=?").bind(sub.endpoint).run()}catch{}}
 }
 async function requireMinecraftApi(request,env){
   if(!env.MINECRAFT_API_TOKEN)return false; const auth=request.headers.get("Authorization")||""; return auth.startsWith("Bearer ")&&await safeSecretEqual(auth.slice(7),env.MINECRAFT_API_TOKEN);
@@ -484,7 +549,8 @@ async function receiveMinecraftMessage(request,env){
   const from=normalizeUuid(String(body.fromUuid||"")),to=normalizeUuid(String(body.toUuid||"")),text=String(body.body||"").trim(),created=Number(body.createdAt||Date.now()); if(!from||!to||!text||text.length>256||!Number.isSafeInteger(created)||Math.abs(Date.now()-created)>86400000)return json({error:"Invalid message."},400);
   const known=await env.DB.prepare("SELECT COUNT(*) n FROM minecraft_accounts WHERE minecraft_uuid IN (?,?)").bind(from,to).first(); if(Number(known?.n)!==2)return json({error:"Both players must have linked accounts."},400);
   const id=String(body.id||crypto.randomUUID()); if(!/^[0-9a-fA-F-]{36}$/.test(id))return json({error:"Invalid message id."},400);
-  await env.DB.prepare("INSERT OR IGNORE INTO player_messages (id,sender_uuid,recipient_uuid,body,source,delivery_status,delivery_mode,created_at,delivered_at) VALUES (?,?,?,?,?,?,?,?,?)").bind(id,from,to,text,"game","delivered","msg",created,created).run(); return new Response(null,{status:204});
+  if(await isBlocked(env,to,from)) return json({error:"Recipient has blocked this player.",blocked:true},403);
+  const inserted=await env.DB.prepare("INSERT OR IGNORE INTO player_messages (id,sender_uuid,recipient_uuid,body,source,delivery_status,delivery_mode,created_at,delivered_at) VALUES (?,?,?,?,?,?,?,?,?)").bind(id,from,to,text,"game","delivered","msg",created,created).run(); if((inserted.meta?.changes||0)>0)await queuePushEvent(env,to,from,text,created); return new Response(null,{status:204});
 }
 
 function normalizeUuid(value) {
