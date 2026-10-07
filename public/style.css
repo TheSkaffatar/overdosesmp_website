@@ -441,3 +441,26 @@ body.modal-open{overflow:hidden}
 .notification-settings{gap:18px}.notification-settings .privacy-toggle{width:100%}.notification-settings .privacy-toggle b{font-weight:600;color:#d8cfdd}
 .conversation-row{display:grid;grid-template-columns:minmax(0,1fr) 30px;padding:4px 5px}.conversation-open{min-width:0;display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:11px;padding:7px 5px;border:0;background:transparent;color:#fff;text-align:left;cursor:pointer}.conversation-open img{width:48px;height:48px;border-radius:9px;image-rendering:pixelated}.conversation-open>span{min-width:0;display:grid;gap:4px}.conversation-open b{font-size:13px}.conversation-open small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#817787;font-size:11px}.conversation-open em{min-width:20px;height:20px;padding:0 6px;display:grid;place-items:center;border-radius:12px;background:#8b3fc1;color:#fff;font-size:10px;font-style:normal;font-weight:800}.conversation-menu,.chat-menu-button{width:28px;height:32px;border:0;border-radius:8px;background:transparent;color:#8e8394;font-size:22px;line-height:1;cursor:pointer}.conversation-menu:hover,.chat-menu-button:hover{background:rgba(155,85,204,.14);color:#fff}.chat-header-actions{margin-left:auto}.chat-options-popover{position:fixed;z-index:240;width:250px;padding:10px;border:1px solid rgba(190,105,236,.22);border-radius:14px;background:rgba(15,10,19,.92);backdrop-filter:blur(18px) saturate(130%);box-shadow:0 18px 55px rgba(0,0,0,.5)}.chat-option-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 9px;color:#ddd3e2;font-size:13px}.mini-toggle input{position:absolute;opacity:0}.mini-toggle i{display:block;width:36px;height:20px;border-radius:99px;background:#312936;border:1px solid #4b4051;position:relative;cursor:pointer}.mini-toggle i:after{content:'';position:absolute;width:14px;height:14px;left:2px;top:2px;border-radius:50%;background:#aaa0ae;transition:.18s}.mini-toggle input:checked+i{background:#7132a4;border-color:#9a4dd1}.mini-toggle input:checked+i:after{transform:translateX(16px);background:#fff}.chat-option-button{width:100%;padding:10px 9px;border:0;border-radius:9px;background:transparent;color:#d8cfdd;text-align:left;cursor:pointer}.chat-option-button:hover{background:rgba(255,255,255,.05)}.chat-option-button.danger-soft{color:#e39aab}.chat-option-button.danger{color:#f06c80}.failed-message{border-color:inherit!important}.failed-message small{color:#ef667b!important}.failed-message small b{display:inline-grid;place-items:center;width:15px;height:15px;margin-right:4px;border-radius:50%;background:#d9435a;color:#fff;font-size:10px}
 @media(max-width:800px){.conversation-row{grid-template-columns:minmax(0,1fr) 24px}.conversation-open{grid-template-columns:42px;justify-items:center;padding:5px}.conversation-open img{width:42px;height:42px}.conversation-open>span,.conversation-open>em{display:none}.conversation-menu{width:24px}}
+
+/* v21.3: three-tier modpack hierarchy */
+.required-pack-wrap{max-width:780px;margin:0 auto 28px}
+.required-pack{position:relative;padding:34px;border-color:#9b50d4;background:linear-gradient(145deg,#321447d9,#120b18f2 48%,#0c090f);box-shadow:0 0 0 1px #b35df52b,0 28px 80px #6f22a52b}
+.required-pack:before{content:"";position:absolute;inset:-1px;border-radius:19px;pointer-events:none;box-shadow:inset 0 0 32px #a74ee41a}
+.required-pack .pack-head small{color:#d692ff}
+.required-pack h3{font-size:44px}
+.required-pack .summary{min-height:0;max-width:650px}
+.required-pack .button.primary{box-shadow:0 0 28px #a64ee447}
+.optional-packs-label{display:flex;align-items:end;justify-content:space-between;gap:18px;margin:4px 0 14px;padding:0 4px}
+.optional-packs-label span{font:800 11px 'Space Grotesk';letter-spacing:.16em;color:#b96df5}
+.optional-packs-label p{margin:0;color:#817887;font-size:12px}
+.optional-pack-grid .pack{border-color:#3a2a42;background:linear-gradient(150deg,#18101fdb,#0c090ff2 46%)}
+.optional-pack-grid .pack:hover{border-color:#624078}
+.optional-pack-grid .full-pack{background:linear-gradient(150deg,#21102ddb,#0c090ff2 46%)}
+.optional-pack-grid .pack-head small{color:#a85fd8}
+@media(max-width:760px){
+.required-pack-wrap{max-width:none;margin-bottom:24px}
+.required-pack{padding:26px}
+.required-pack h3{font-size:38px}
+.optional-packs-label{display:block}
+.optional-packs-label p{margin-top:5px}
+}
