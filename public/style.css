@@ -426,3 +426,13 @@ body.modal-open{overflow:hidden}
 .nav-actions [data-link="vote"],.profile-top-actions [data-profile-vote],.players-top-actions [data-players-vote],.messages-top-actions [data-messages-vote]{background:transparent;border-color:rgba(255,255,255,.10);color:#b8acbc}
 .chats-trigger{cursor:pointer}.chats-trigger[hidden]{display:none!important}
 @media(min-width:1000px){.nav-actions .donate-button,.profile-top-actions .donate-button,.nav-actions [data-link="vote"],.profile-top-actions [data-profile-vote],.players-top-actions [data-players-vote],.messages-top-actions [data-messages-vote]{padding-left:11px;padding-right:11px;font-size:12px}}
+\n/* v20.2 navbar hierarchy */
+.nav-left{display:flex;align-items:center;gap:9px;flex-shrink:0}.nav-left .brand,.nav-left .profile-brand{margin-right:5px}.nav-left .nav-button{min-height:32px;padding:6px 11px;border-radius:8px;font-size:11px;background:transparent;border-color:rgba(255,255,255,.10);color:#a99eae!important}.nav-left .donate-button{background:rgba(70,36,81,.22);border-color:rgba(133,74,151,.30);color:#cbb1d6!important}.nav-left .nav-button:hover{background:rgba(113,56,137,.18);border-color:rgba(164,91,190,.45);color:#eee4f3!important}
+.nav-actions .players-trigger,.profile-top-actions .players-trigger,.nav-actions .chats-trigger,.profile-top-actions .chats-trigger{background:rgba(255,255,255,.018);border-color:#493052;color:#ddd4e1!important}
+.nav-actions .inbox-trigger,.profile-top-actions .inbox-trigger{background:linear-gradient(180deg,rgba(97,40,122,.22),rgba(45,21,57,.22));border-color:#74408a;color:#eadcf0!important;box-shadow:inset 0 0 14px rgba(146,66,178,.05)}
+.nav-actions .inbox-trigger:hover,.profile-top-actions .inbox-trigger:hover{background:rgba(106,43,135,.30);border-color:#9856b2;box-shadow:0 0 18px rgba(142,65,175,.13)}
+.nav-actions .account-trigger,.profile-top-actions .account-trigger{min-height:43px!important;padding:10px 21px!important;min-width:88px;background:linear-gradient(180deg,#3b174a,#25102f)!important;border:1px solid #9552b3!important;color:#fff!important;font-weight:750;box-shadow:inset 0 0 0 1px rgba(210,132,239,.06),0 5px 20px rgba(94,32,119,.18)}
+.nav-actions .account-trigger:hover,.profile-top-actions .account-trigger:hover{background:linear-gradient(180deg,#481b59,#2d1239)!important;border-color:#b267ce!important;box-shadow:0 0 22px rgba(143,62,174,.20)}
+.nav-actions,.profile-top-actions{gap:9px}
+@media(max-width:1050px){.topbar>.nav-left .nav-button,.profile-topbar>.nav-left .nav-button{display:none}}
+@media(max-width:800px){.topbar>.nav-left{display:flex}.topbar>.nav-left .brand{display:block}}

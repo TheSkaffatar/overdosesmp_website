@@ -33,7 +33,7 @@ let currentAccount=null,accountLastFocus=null;
 function setAccountView(view){authView.hidden=view!=="login";registerView.hidden=view!=="register"}
 function formatDate(ms){if(!ms)return "—";return new Intl.DateTimeFormat(undefined,{year:"numeric",month:"short",day:"numeric"}).format(new Date(ms))}
 function renderAccount(account){
-  currentAccount=account||null;accountTrigger.textContent=account?.username||"Log In";
+  currentAccount=account||null;accountTrigger.textContent=account?"Profile":"Log In";
   updateInboxAvailability();
   if(!account)return;
   document.getElementById("profile-account-username").textContent=account.username;
