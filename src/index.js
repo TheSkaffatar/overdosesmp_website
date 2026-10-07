@@ -47,6 +47,8 @@ async function handleRequest(request, env) {
       if (!sameOrigin(request)) return json({ error: "Invalid request." }, 403);
       return changeProfilePrivacy(request, env);
     }
+    if (url.pathname === "/api/messages/inbox" && request.method === "GET") return getMessageInbox(request, env);
+    if (url.pathname === "/api/messages/conversations" && request.method === "GET") return getMessageConversations(request, env);
     const webMessageMatch = url.pathname.match(/^\/api\/messages\/([^/]+)$/);
     if (webMessageMatch && request.method === "GET") return getConversation(request, env, decodeURIComponent(webMessageMatch[1]));
     if (webMessageMatch && request.method === "POST") { if (!sameOrigin(request)) return json({ error: "Invalid request." }, 403); return sendWebMessage(request, env, decodeURIComponent(webMessageMatch[1])); }
@@ -423,13 +425,34 @@ async function messagePeer(env, username) {
   if (!/^[A-Za-z0-9_]{1,16}$/.test(username)) return null;
   return env.DB.prepare("SELECT minecraft_uuid, minecraft_username FROM minecraft_accounts WHERE minecraft_username = ? COLLATE NOCASE LIMIT 1").bind(username).first();
 }
+async function messageIdentity(request, env) {
+  const account=await authenticatedAccount(request,env); if(!account)return null;
+  const me=await linkedMinecraftForAccount(env,account.id); return me||null;
+}
+async function getMessageInbox(request, env) {
+  const me=await messageIdentity(request,env); if(!me)return json({error:"Link your Minecraft account first."},403);
+  const rows=await env.DB.prepare(`SELECT pm.id,pm.sender_uuid,ma.minecraft_username sender_username,pm.body,pm.created_at
+    FROM player_messages pm JOIN minecraft_accounts ma ON ma.minecraft_uuid=pm.sender_uuid
+    WHERE pm.recipient_uuid=? AND pm.read_at IS NULL ORDER BY pm.created_at DESC LIMIT 50`).bind(me.minecraft_uuid).all();
+  return json({messages:rows.results||[]});
+}
+async function getMessageConversations(request, env) {
+  const me=await messageIdentity(request,env); if(!me)return json({error:"Link your Minecraft account first."},403);
+  const rows=await env.DB.prepare(`SELECT pm.id,pm.sender_uuid,pm.recipient_uuid,pm.body,pm.created_at,pm.read_at,
+    CASE WHEN pm.sender_uuid=? THEN pm.recipient_uuid ELSE pm.sender_uuid END peer_uuid
+    FROM player_messages pm WHERE pm.sender_uuid=? OR pm.recipient_uuid=? ORDER BY pm.created_at DESC LIMIT 1000`).bind(me.minecraft_uuid,me.minecraft_uuid,me.minecraft_uuid).all();
+  const seen=new Set(), conversations=[];
+  for(const r of (rows.results||[])){ if(seen.has(r.peer_uuid))continue; seen.add(r.peer_uuid); const peer=await env.DB.prepare("SELECT minecraft_username FROM minecraft_accounts WHERE minecraft_uuid=? LIMIT 1").bind(r.peer_uuid).first(); if(!peer)continue; const unread=await env.DB.prepare("SELECT COUNT(*) n FROM player_messages WHERE sender_uuid=? AND recipient_uuid=? AND read_at IS NULL").bind(r.peer_uuid,me.minecraft_uuid).first(); conversations.push({username:peer.minecraft_username,lastBody:r.body,lastAt:r.created_at,unread:Number(unread?.n||0)}); }
+  return json({conversations});
+}
 async function getConversation(request, env, username) {
   const account=await authenticatedAccount(request,env); if(!account)return json({error:"You must be logged in."},401);
   const me=await linkedMinecraftForAccount(env,account.id); if(!me)return json({error:"Link your Minecraft account first."},403);
   const peer=await messagePeer(env,username); if(!peer)return json({error:"Player not found."},404);
-  const rows=await env.DB.prepare(`SELECT id,sender_uuid,recipient_uuid,body,source,delivery_mode,created_at FROM player_messages
+  const rows=await env.DB.prepare(`SELECT id,sender_uuid,recipient_uuid,body,source,delivery_mode,created_at,read_at FROM player_messages
     WHERE (sender_uuid=? AND recipient_uuid=?) OR (sender_uuid=? AND recipient_uuid=?) ORDER BY created_at ASC LIMIT 500`)
     .bind(me.minecraft_uuid,peer.minecraft_uuid,peer.minecraft_uuid,me.minecraft_uuid).all();
+  await env.DB.prepare("UPDATE player_messages SET read_at=? WHERE recipient_uuid=? AND sender_uuid=? AND read_at IS NULL").bind(Date.now(),me.minecraft_uuid,peer.minecraft_uuid).run();
   return json({player:peer.minecraft_username,messages:(rows.results||[]).map(r=>({id:r.id,outgoing:r.sender_uuid===me.minecraft_uuid,body:r.body,source:r.source,deliveryMode:r.delivery_mode,createdAt:r.created_at}))});
 }
 async function sendWebMessage(request,env,username){
